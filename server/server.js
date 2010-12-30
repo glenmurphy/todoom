@@ -28,8 +28,8 @@ function Server(client) {
 GMBase.Listener.Extend(Server);
 
 Server.SAVE_CYCLE = 1000 * 60 * 20;
-Server.BACKUP_FILE = 'todoom.json';
-Server.OLDFILE = 'todoom.old';
+Server.BACKUP_FILE = './data/todoom.json';
+Server.OLDFILE = './data/todoom.old';
 
 // STATE SAVING AND LOADING ---------------------------------------------------
 Server.prototype.load = function() {
