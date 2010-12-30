@@ -2,206 +2,84 @@ var http = require('http'),
     url = require('url'),
     fs = require('fs'),
     io = require('./socket.io'),
+    crypto = require('crypto'),
     functions = require('../shared/functions.js'),
     GMBase = require('../shared/gmbase.js').GMBase,
     User = require('../shared/user_model.js').User,
     Project = require('../shared/project_model.js').Project,
     Task = require('../shared/task_model.js').Task,
+    ToDB = require('./todb.js').ToDB,
     sys = require(process.binding('natives').util ? 'util' : 'sys');
 
 function Server(client) {
   this.clients = {};
-  this.projects = {};
-  this.users = {};
-  this.tasks = {};
+  this.db = new ToDB();
 
-  this.users['user1'] = new User({
-    key : 'user1',
-    name : 'Glen',
-    email : 'glen@glenmurphy.com'
-  });
-  
-  this.load();
-  setInterval(this.backup.bind(this), Server.SAVE_CYCLE);
+  process.on('SIGHUP', this.preExit.bind(this));
+  process.on('SIGINT', this.preExit.bind(this));
 }
 
 GMBase.Listener.Extend(Server);
 
-Server.SAVE_CYCLE = 1000 * 60 * 20;
-Server.BACKUP_FILE = './data/todoom.json';
-Server.OLDFILE = './data/todoom.old';
-
-// STATE SAVING AND LOADING ---------------------------------------------------
-Server.prototype.load = function() {
-  try {
-    var text = fs.readFileSync(Server.BACKUP_FILE);
-    var data = JSON.parse(text);
-
-    for (var user_key in data.users) {
-      this.users[user_key] = new User(data.users[user_key]);
-      this.users[user_key].hash = data.users[user_key].hash;
-    }
-    for (var task_key in data.tasks) {
-      this.tasks[task_key] = new Task(data.tasks[task_key]);
-    }
-    for (var project_key in data.projects) {
-      this.projects[project_key] = new Project(data.projects[project_key]);
-    }
-  } catch(e) {
-    console.log("Error loading file");
-  }
-};
-
-Server.prototype.backup = function(sync) {
-  console.log('Saving...');
-
-  var data = {
-    users : {},
-    tasks : {},
-    projects : {}
-  };
-
-  for (var user_key in this.users) {
-    data.users[user_key] = this.users[user_key].getData();
-    data.users[user_key].hash = this.users[user_key].hash;
-  }
-  for (var task_key in this.tasks) {
-    data.tasks[task_key] = this.tasks[task_key].getData();
-  }
-  for (var project_key in this.projects) {
-    data.projects[project_key] = this.projects[project_key].getData();
-  }
-
-  if (sync) {
-    try {
-      fs.renameSync(Server.BACKUP_FILE, Server.OLDFILE);
-    } catch(e) {}
-    fs.writeFileSync(Server.BACKUP_FILE, JSON.stringify(data));
-  } else {
-    fs.rename(Server.BACKUP_FILE, Server.OLDFILE, function(err) {
-      if (err) console.log(err);
-      fs.writeFile(Server.BACKUP_FILE, JSON.stringify(data));
-    });
-  }
-};
+Server.prototype.preExit = function() {
+  console.log('Exiting...');
+  this.db.backup(true);
+  process.exit();
+}
 
 // CONNECTION AND USER --------------------------------------------------------
 Server.prototype.createUser = function(email, password) {
   // TODO: Optimize.
-  for (var key in this.users) {
-    if (this.users[key].email == email) {
-      if ('hash' in this.users[key]) {
-        return {
-          'type' : 'error',
-          'message' : 'A user with that email address already exists'
-        }
+  var user = this.db.getUserByEmail(email);
+
+  if (user) {
+    if ('hash' in user) {
+     return {
+        'type' : 'error',
+        'message' : 'A user with that email address already exists'
       }
-      this.users[key].hash = this.hashFunction(email, password);
-      return this.users[key];
     }
+    // The stub already existed, so we assume that this is
+    // a user logging into that profile for the first time.
+    user.hash = this.hashFunction(email, password);
+    return user;
   }
 
-  var user = new User({
-    email : email,
-    hash : this.hashFunction(email, password)
-  })
+  // If we haven't returned, they must really be a new user.
+  user = new User({
+    email : email
+  });
+  user.hash = this.hashFunction(email, password);
+  return user;
 };
 
-Server.prototype.getUser = function(email, password) {
-  // TODO: Optimize.
-  for (var key in this.users) {
-    if (this.users[key].email == email) {
-      if (this.users[key].hash == this.hashFunction(email, password))
-        return this.users[key];
-    }
-  }
+Server.prototype.loginUser = function(email, password) {
+  var user = this.db.getUserByEmail(email);
+
+  if (user && this.hashCheck(email, password, user))
+    return user
+
   return false;
 };
 
 Server.prototype.hashFunction = function(email, password) {
-  // TODO: Obviously, don't be this stupid.
-  return email + ':' + password;
+  return crypto.createHash("sha256").update(email + ':' + password).digest("base64");
+};
+
+Server.prototype.hashCheck = function(email, password, user) {
+  if (!('hash' in user) || !user.hash) {
+    return false;
+  }
+
+  var login_hash = this.hashFunction(email, password);
+  var stored_version = user.hash.split(":")[0]; // For versioning.
+  var stored_hash = user.hash.substr(user.hash.indexOf(":") + 1);
+  return (stored_hash == login_hash);
 };
 
 Server.prototype.validationError = function(message) {
   console.log(message);
   return false;
-};
-
-
-// GETTERS --------------------------------------------------------------------
-Server.prototype.getProjectsForUser = function(user) {
-  // TODO: Optimize
-  var projects = [];
-  for (var i in this.projects) {
-    if (this.projects[i].users.contains(user.key)) {
-      projects.push(this.projects[i]);
-    }
-  }
-  return projects;
-};
-
-Server.prototype.getUserKeysForTask = function(task) {
-  var user_keys = {};
-  if (task.owner) user_keys[task.owner] = true;
-  if (task.creator) user_keys[task.creator] = true;
-  if (task.project) {
-    var project = this.projects[task.project];
-    // TODO: Optimize.
-    for (var i = 0, user; user = project.users[i]; i++) {
-      user_keys[user] = true;
-    }
-  }
-
-  return functions.collapseMap(user_keys);
-};
-
-Server.prototype.getTasksForUser = function(user) {
-  // TODO: Optimize
-  var tasks = [];
-  var projects = {};
-  for (var project_key in this.projects) {
-    var project = this.projects[project_key];
-
-    if (project.users.contains(user.key)) {
-      projects[project.key] = true;
-    }
-  }
-
-  for (var task_key in this.tasks) {
-    var task = this.tasks[task_key];
-    if (task.owner == user.key || task.creator == user.key || task.project in projects) {
-      tasks.push(task);
-    }
-  }
-
-  return tasks;
-};
-
-Server.prototype.getUsersForUser = function(user) {
-  // TODO: Optimize.
-  var user_keys = {};
-  user_keys[user.key] = true;
-
-  // Get all users attached to projects that user is also attached to.
-  for (var project_key in this.projects) {
-    var project = this.projects[project_key];
-
-    if (!project.users.contains(user.key))
-      continue;
-
-    for (var u = 0, user_key; user_key = project.users[u]; u++) {
-      user_keys[user_key] = true;
-    }
-  }
-
-  // TODO: Get all users attached to tasks that user is creator or owner of.
-  
-  var users = [];
-  for (var key in user_keys) {
-    users.push(this.users[key]);
-  }
-  return users;
 };
 
 // DATA HANDLING --------------------------------------------------------------
@@ -211,9 +89,8 @@ Server.prototype.handleUpdateTask = function(sender, data) {
   var project;
 
   // Get the existing task.
-  if (data.key in this.tasks) {
-    task = this.tasks[data.key];
-  } else {
+  var task = this.db.getTask(data.key);
+  if (!task) {
     task = new Task();
     task.creator = sender;
   }
@@ -223,12 +100,12 @@ Server.prototype.handleUpdateTask = function(sender, data) {
 
   // Validate.
   if (data.project) {
-    if (!(data.project in this.projects)) {
+    project = this.db.getProject(data.project);
+    if (!project) {
       return this.validationError("Specified project does not exist");
     }
-    project = this.projects[data.project];
-  } else if (task.project && task.project in this.projects) {
-    project = this.projects[task.project];
+  } else if (task.project) {
+    project = this.db.getProject(task.project);
   }
   
   if (project && !project.users.contains(sender)) {
@@ -236,12 +113,12 @@ Server.prototype.handleUpdateTask = function(sender, data) {
   }
 
   if (data.owner) {
-    if (!(data.owner in this.users)) {
+    var owner = this.db.getUser(data.owner ? data.owner : task.owner);
+    if (!owner) {
       return this.validationError("Specified owner does not exist");
     }
-    owner = this.users[data.owner];
-  } else if (task.owner && task.owner in this.users) {
-    owner = this.users[task.owner];
+  } else if (task.owner) {
+    owner = this.db.getUser(task.owner);
   }
   // TODO: Verify that creator has permissions to add tasks to owner.
   
@@ -253,16 +130,15 @@ Server.prototype.handleUpdateTask = function(sender, data) {
     task.setStatus(data.status);
   }
   task.setData(data);
-  this.tasks[task.key] = task;
+  this.db.putTask(task);
   this.notifyTask(task);
 };
 
 Server.prototype.handleUpdateProject = function(sender, data) {
-  var project;
+  var project = this.db.getProject(data.key);
 
   // Get the existing project.
-  if (this.projects && data.key in this.projects) {
-    project = this.projects[data.key];
+  if (project) {
     if (!project.users.contains(sender)) {
       return validationError("You are a not a member of that project");
     }
@@ -272,24 +148,21 @@ Server.prototype.handleUpdateProject = function(sender, data) {
   }
 
   project.setData(data);
-  this.projects[project.key] = project;
+  this.db.putProject(project);
   this.notifyProject(project);
 };
 
 Server.prototype.userCanAccessTask = function(user_key, task_key) {
-  var user = this.users[user_key];
-  var task = this.tasks[task_key];
+  var user = this.db.getUser(user_key);
+  var task = this.db.getTask(task_key);
 
   if (task.owner == user_key || task.creator == user_key) {
     return true;
   }
-  if (!task.project || !(task.project in this.projects)) {
-    return false;
-  }
-  var project = this.projects[task.project];
-  if (project.users.contains(user_key)) {
-    return true;
-  }
+
+  // Must be a project task.
+  var project = this.db.getProject(task.project);
+  return (project && project.users.contains(user_key));
 }
 
 Server.prototype.handleDeleteTask = function(sender, data) {
@@ -298,7 +171,7 @@ Server.prototype.handleDeleteTask = function(sender, data) {
   }
   
   this.notifyDeleteTask(this.tasks[data.key]);
-  delete this.tasks[data.key];
+  this.db.deleteTask(data.key);
 };
 
 Server.prototype.handleArchiveUserTasks = function(sender, data) {
@@ -306,13 +179,16 @@ Server.prototype.handleArchiveUserTasks = function(sender, data) {
     return this.validationError("You do not have access to that user");
   }
 
-  this.users[data.key].archive_tasks_before = new Date().getTime();
-  this.notifyUser(this.users[data.key]);
+  var user = this.db.getUser(data.key);
+  if (user) {
+    user.archive_tasks_before = new Date().getTime();
+    this.notifyUser(user);
+  }
 };
 
 Server.prototype.handleArchiveProjectTasks = function(sender, data) {
-  var project = this.projects[data.key];
-  if (!project.users.contains(sender)) {
+  var project = this.db.getProject(data.key);
+  if (!project || !project.users.contains(sender)) {
     return this.validationError("You do not have access to that project");
   }
 
@@ -324,8 +200,12 @@ Server.prototype.handleUpdateUser = function(sender, data) {
   if (sender != data.key) {
     return this.validationError("You do not have access to that user");
   }
-  this.users[data.key].setData(data);
-  this.notifyUser(this.users[data.key]);
+
+  var user = this.db.getUser(data.key);
+  if (user) {
+    user.setData(data);
+    this.notifyUser(user);
+  }
 };
 
 Server.prototype.addConnectedClient = function(client) {
@@ -340,7 +220,8 @@ Server.prototype.addConnectedClient = function(client) {
  * @param client
  */
 Server.prototype.handleLogin = function(client, email, password) {
-  var user = this.getUser(email, password);
+  var user = this.loginUser(email, password);
+  
   if (!user) {
     client.send({
       message_type : 'error',
@@ -357,17 +238,17 @@ Server.prototype.handleLogin = function(client, email, password) {
     users : [],
     projects : []
   };
-  var friends = this.getUsersForUser(client.user);
+  var friends = this.db.getUsersForUser(client.user);
   for (var i = 0, friend; friend = friends[i]; i++) {
     data.users.push(friend.getData());
   }
 
-  var tasks = this.getTasksForUser(client.user);
+  var tasks = this.db.getTasksForUser(client.user);
   for (var i = 0, task; task = tasks[i]; i++) {
     data.tasks.push(task.getData());
   }
 
-  var projects = this.getProjectsForUser(client.user);
+  var projects = this.db.getProjectsForUser(client.user);
   for (var i = 0, project; project = projects[i]; i++) {
     data.projects.push(project.getData());
   }
@@ -431,7 +312,7 @@ Server.prototype.disconnect = function(client) {
 
 // SENDERS --------------------------------------------------------------------
 Server.prototype.notifyTask = function(task) {
-  var user_keys_list = this.getUserKeysForTask(task);
+  var user_keys_list = this.db.getUserKeysForTask(task);
 
   this.message(user_keys_list, {
     message_type : 'update',
@@ -441,7 +322,7 @@ Server.prototype.notifyTask = function(task) {
 };
 
 Server.prototype.notifyDeleteTask = function(task) {
-  var user_keys_list = this.getUserKeysForTask(task);
+  var user_keys_list = this.db.getUserKeysForTask(task);
 
   this.message(user_keys_list, {
     message_type : 'delete',
@@ -461,7 +342,7 @@ Server.prototype.notifyProject = function(project) {
 Server.prototype.notifyUser = function(user) {
   var user_keys = [user.key];
 
-  var projects = this.getProjectsForUser(user);
+  var projects = this.db.getProjectsForUser(user);
   for (var i = 0, project; project = projects[i]; i++) {
     for (var u = 0, project_user; project_user = projects[i].users[u]; u++) {
       if (project_user != user.key) {
@@ -530,16 +411,4 @@ process.on('uncaughtException', function (err) {
   console.log('Caught exception: ' + err);
   console.log(err.stack);
   console.log("---------------------------------");
-});
-
-process.on('SIGHUP', function () {
-  console.log('Got SIGHUP signal.');
-  server.backup(true);
-  process.exit();
-});
-
-process.on('SIGINT', function() {
-  console.log('Got SIGINT signal.');
-  server.backup(true);
-  process.exit();
 });
