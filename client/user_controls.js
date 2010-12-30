@@ -21,7 +21,7 @@ UserControls.prototype.constructor_ = function(controller, user) {
 };
 
 UserControls.prototype.handleClose = function() {
-  UI.current.hideUser(this.user);
+  getUI().hideUser(this.user);
 };
 
 UserControls.prototype.handleArchiveTasks = function() {

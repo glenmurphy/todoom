@@ -1,6 +1,6 @@
 function UI(controller) {
-  if (UI.current) {
-    return UI.current;
+  if (UI.instance) {
+    return UI.instance;
   }
   
   this.controller = controller;
@@ -30,11 +30,18 @@ function UI(controller) {
 
   this.signin = new SignInView(this.controller);
 
-  UI.current = this;
+  UI.instance = this;
   this.arrangeColumns();
 }
 
-UI.current = null;
+UI.instance = null;
+
+function getUI() {
+  if (UI.instance) {
+    return UI.instance;
+  }
+  return new UI(controller);
+}
 
 UI.prototype.arrangeColumns = function() {
   if (isEmpty(this.user_views)) {

@@ -415,6 +415,10 @@ hr.separator {
   display:inline-block;
   vertical-align:middle;
   color:#666;
+  cursor:pointer;
+}
+.project-name:hover {
+  color:#333;
 }
 .task.finished .project-name {
   text-decoration:line-through;

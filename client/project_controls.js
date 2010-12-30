@@ -23,7 +23,7 @@ ProjectControls.prototype.constructor_ = function(controller, project) {
 };
 
 ProjectControls.prototype.handleUsersButton = function() {
-  UI.current.showProjectUserManager(this.project);
+  getUI().showProjectUserManager(this.project);
 };
 
 ProjectControls.prototype.handleArchiveTasksButton = function() {
@@ -31,5 +31,5 @@ ProjectControls.prototype.handleArchiveTasksButton = function() {
 };
 
 ProjectControls.prototype.handleCloseButton = function() {
-  UI.current.hideProject(this.project);
+  getUI().hideProject(this.project);
 };

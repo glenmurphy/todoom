@@ -11,6 +11,7 @@ TaskView.prototype.constructor_ = function(controller, task) {
   this.appendChild(this.status);
 
   this.project = createElement('div', 'project-name', this);
+  this.project.addEventListener('click', this.handleProjectClicked.bind(this));
 
   this.name = new TextField(this.controller, 'name', this.task, 'name');
   this.appendChild(this.name);
@@ -50,6 +51,15 @@ TaskView.prototype.updateProject = function() {
   var project = this.controller.getProject(this.task.project);
   if (project) {
     this.project.innerText = project.name;
+  } else {
+    this.project.innerText = '';
+  }
+};
+
+TaskView.prototype.handleProjectClicked = function() {
+  var project = this.controller.getProject(this.task.project);
+  if (project) {
+    getUI().showProject(project);
   } else {
     this.project.innerText = '';
   }
