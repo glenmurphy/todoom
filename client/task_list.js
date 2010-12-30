@@ -90,9 +90,9 @@ TaskList.prototype.sortList = function() {
     return compare(b.task.key, a.task.key);
   });
 
-  if (this.separator.parentNode == this) {
+  try {
     this.removeChild(this.separator);
-  }
+  } catch(e) {}
 
   for (var i = 0, task_view; task_view = this.task_views[i]; i++) {
     if (!task_view.task[ref_key] && this.separator.parentNode != this) {
