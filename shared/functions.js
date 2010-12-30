@@ -33,6 +33,13 @@ Array.prototype.contains = function(val) {
   return (this.indexOf(val) != -1);
 };
 
+function isEmpty(obj) {
+  for (var i in obj) {
+    return false;
+  }
+  return true;
+}
+
 function compare(a, b) {
   return (a > b ? -1 : (a < b ? 1 : 0));
 }

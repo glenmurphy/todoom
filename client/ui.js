@@ -31,9 +31,25 @@ function UI(controller) {
   this.signin = new SignInView(this.controller);
 
   UI.current = this;
+  this.arrangeColumns();
 }
 
 UI.current = null;
+
+UI.prototype.arrangeColumns = function() {
+  if (isEmpty(this.user_views)) {
+    this.projects_column.classList.add('solo');
+    this.projects_column.classList.remove('hidden');
+    this.users_column.classList.add('hidden');
+  } else if (isEmpty(this.project_views)) {
+    this.users_column.classList.add('solo');
+    this.users_column.classList.remove('hidden');
+    this.projects_column.classList.add('hidden');
+  } else {
+    this.users_column.classList.remove('solo');
+    this.projects_column.classList.remove('solo');
+  }
+};
 
 UI.prototype.showProject = function(project) {
   if (project.key in this.project_views)
@@ -43,6 +59,7 @@ UI.prototype.showProject = function(project) {
     this.projects_column.appendChild(project_view);
     this.project_views[project.key] = project_view;
   }
+  this.arrangeColumns();
 };
 
 UI.prototype.showProjectUserManager = function(project) {
@@ -60,6 +77,7 @@ UI.prototype.hideProject = function(project) {
   }
   this.projects_column.removeChild(this.project_views[project.key]);
   delete this.project_views[project.key];
+  this.arrangeColumns();
 };
 
 UI.prototype.showUser = function(user) {
@@ -70,6 +88,7 @@ UI.prototype.showUser = function(user) {
     this.users_column.appendChild(user_view);
     this.user_views[user.key] = user_view;
   }
+  this.arrangeColumns();
 };
 
 UI.prototype.hideUser = function(user) {
@@ -78,6 +97,7 @@ UI.prototype.hideUser = function(user) {
   }
   this.users_column.removeChild(this.user_views[user.key]);
   delete this.user_views[user.key];
+  this.arrangeColumns();
 };
 
 UI.prototype.handleNewProject = function(data) {
