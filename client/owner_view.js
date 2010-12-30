@@ -12,6 +12,7 @@ OwnerView.prototype.constructor_ = function(controller, task) {
   // Create the text.
   this.name = createElement('div', 'name', this);
   this.name.addEventListener('click', this.handleNameClicked.bind(this));
+  ToolTip().watch(this.name, '')
   this.appendChild(this.name);
   
   this.task = task;
@@ -32,8 +33,10 @@ OwnerView.prototype.update = function() {
   if (this.task.owner) {
     this.name.classList.remove('unassigned');
     this.name.innerText = this.controller.users[this.task.owner].name;
+    this.name.setAttribute('data-tooltip', this.controller.users[this.task.owner].email);
   } else {
     this.name.classList.add('unassigned');
+    this.name.setAttribute('data-tooltip', '');
     this.name.innerText = 'no-one';
   }
 };

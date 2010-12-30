@@ -29,7 +29,8 @@ ToolTipManager.prototype.handleMouseOver = function(node) {
   this.current = node;
   if (this.timeout)
     clearTimeout(this.timeout);
-  this.timeout = setTimeout(this.handleTimer.bind(this, node), 1000);
+  if (node.getAttribute('data-tooltip'))
+    this.timeout = setTimeout(this.handleTimer.bind(this, node), 1000);
 };
 
 ToolTipManager.prototype.handleMouseOut = function(node) {
