@@ -135,41 +135,42 @@ body {
   text-decoration:underline;
 }
 .main {
-  margin-left:auto;
-  margin-right:auto;
-  width:920px;
   position:relative;
+  min-width:874px;
 }
 .col-users {
-  display:inline-block;
-  vertical-align:top;
-  width:40%;
-  text-align:right;
-  min-width:300px;
-  -webkit-transition:all 0.5s;
-}
-.col-users.solo {
   display:block;
-  width:300px;
-  margin-left:auto;
-  margin-right:auto;
-  text-align:left;
-  -webkit-transition:all 0.5s;
+  width:362px;
+  -webkit-transition:all 0.35s;
+  position:absolute;
+  left:50%;
+  margin-left:-431px; /* 362 + 69 (diff between sizes ex 1 margin) */
+  opacity:1;
+}
+.col-users.hidden {
+  opacity:0;
+  pointer-events:none;
+}
+.col-users.center {
+  left:50%;
+  margin-left:-181px;
 }
 .col-projects {
-  display:inline-block;
-  vertical-align:top;
-  width:60%;
-  text-align:left;
-  min-width:500px;
-  -webkit-transition:all 0.5s;
-}
-.col-projects.solo {
   display:block;
-  width:500px;
-  margin-left:auto;
-  margin-right:auto;
-  -webkit-transition:all 0.5s;
+  width:512px;
+  -webkit-transition:all 0.35s;
+  position:absolute;
+  left:50%;
+  margin-left:-69px;
+  opacity:1;
+}
+.col-projects.hidden {
+  opacity:0;
+  pointer-events:none;
+}
+.col-projects.center {
+  left:50%;
+  margin-left:-256px;
 }
 
 /* Menu */

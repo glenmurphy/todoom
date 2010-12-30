@@ -14,8 +14,8 @@ function UI(controller) {
   this.user_views = {};
 
   this.body = createElement('div', 'main', document.body);
-  this.users_column = createElement('div', 'col-users', this.body);
-  this.projects_column = createElement('div', 'col-projects', this.body);
+  this.users_column = createElement('div', 'col-users solo', this.body);
+  this.projects_column = createElement('div', 'col-projects solo', this.body);
 
   this.menu_users = createElement('div', 'control', this.topbar);
   this.menu_users.innerHTML = 'Friends';
@@ -44,18 +44,32 @@ function getUI() {
 }
 
 UI.prototype.arrangeColumns = function() {
-  if (isEmpty(this.user_views)) {
-    this.projects_column.classList.add('solo');
-    this.projects_column.classList.remove('hidden');
-    this.users_column.classList.add('hidden');
-  } else if (isEmpty(this.project_views)) {
-    this.users_column.classList.add('solo');
-    this.users_column.classList.remove('hidden');
-    this.projects_column.classList.add('hidden');
-  } else {
-    this.users_column.classList.remove('solo');
-    this.projects_column.classList.remove('solo');
+  function hideCol(col) {
+    col.classList.add('center');
+    col.classList.add('hidden');
   }
+  var width;
+  if (isEmpty(this.user_views)) {
+    hideCol(this.users_column);
+    this.projects_column.classList.add('center');
+    this.projects_column.classList.remove('hidden');
+    width = this.projects_column.offsetWidth;
+  } else if (isEmpty(this.project_views)) {
+    hideCol(this.projects_column);
+    this.users_column.classList.add('center');
+    this.users_column.classList.remove('hidden');
+    width = this.users_column.offsetWidth;
+  } else {
+    this.users_column.classList.remove('center');
+    this.projects_column.classList.remove('center');
+    this.users_column.classList.remove('hidden');
+    this.projects_column.classList.remove('hidden');
+    width = this.users_column.offsetWidth + this.projects_column.offsetWidth - 12;
+  }
+
+  window.console.log(width);
+  // So that centering works while still scrolling properly at small sizes.
+  this.body.style.minWidth = width + 'px';
 };
 
 UI.prototype.showProject = function(project) {
