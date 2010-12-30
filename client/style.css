@@ -319,17 +319,34 @@ body {
 
 .create-field {
   width:100%;
-  padding:5px 5px 5px 10px;
+  padding:7px 5px 5px 29px;
   border-width:0;
   border-top:1px solid #ddd;
   background-color:#f6f6f6;
   margin-bottom:0;
   font-size:inherit;
 }
+.create-field:focus {
+  outline:none;
+}
+/*
+.create-field {
+  width:100%;
+  padding:5px 5px 5px 29px;
+  border-width:0;
+  margin:0;
+  margin-bottom:6px;
+  margin-top:2px;
+  font-size:inherit;
+}
+.create-field:focus {
+  outline:none;
+  border:0;
+}
+*/
 
 /* TASK */
 .task-list {
-  padding-bottom:3px;
   position:relative;
 }
 .task {
@@ -442,14 +459,29 @@ content:":\00a0";
   background-repeat:no-repeat;
   overflow:hidden;
 }
+.status-view:hover {
+  background-position:0 -18px;;
+}
+
 .status-view.started {
   background-position:-18px 0;
 }
+.status-view.started:hover {
+  background-position:-18px -18px;
+}
+
 .status-view.paused {
   background-position:-36px 0;
 }
+.status-view.paused:hover {
+  background-position:-36px -18px;
+}
+
 .status-view.finished {
   background-position:-54px 0;
+}
+.status-view.finished:hover {
+  background-position:-54px -18px;
 }
 
 .button {
