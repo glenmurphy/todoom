@@ -1,7 +1,7 @@
 var http = require('http'),
     url = require('url'),
     fs = require('fs'),
-    io = require('./socket.io'),
+    io = require('socket.io'),
     crypto = require('crypto'),
     functions = require('../shared/functions.js'),
     GMBase = require('../shared/gmbase.js').GMBase,
@@ -53,13 +53,13 @@ Server.prototype.createUser = function(email, password) {
   return user;
 };
 
-Server.prototype.loginUser = function(email, password) {
-  var user = this.db.getUserByEmail(email);
-
-  if (user && this.hashCheck(email, password, user))
-    return user
-
-  return false;
+Server.prototype.loginUser = function(email, password, callback) {
+  this.db.getUserByEmail(email, (function(user) {
+    if (user && this.hashCheck(email, password, user))
+      callback(user);
+    else
+      callback(false);
+  }).bind(this));
 };
 
 Server.prototype.hashFunction = function(email, password) {
@@ -88,90 +88,107 @@ Server.prototype.handleUpdateTask = function(sender, data) {
   var owner;
   var project;
 
-  // Get the existing task.
-  var task = this.db.getTask(data.key);
-  if (!task) {
-    task = new Task();
-    task.creator = sender;
-  }
-  
   // Purge any unused data fields.
   delete data.creator;
 
-  // Validate.
-  if (data.project) {
-    project = this.db.getProject(data.project);
-    if (!project) {
-      return this.validationError("Specified project does not exist");
+  // Get the existing task.
+  this.db.getTask(data.key, (function(task) {
+    if (!task) {
+      task = new Task();
+      task.creator = sender;
     }
-  } else if (task.project) {
-    project = this.db.getProject(task.project);
-  }
-  
-  if (project && !project.users.contains(sender)) {
-    return this.validationError("You are not a member of that project");
-  }
 
-  if (data.owner) {
-    var owner = this.db.getUser(data.owner ? data.owner : task.owner);
-    if (!owner) {
-      return this.validationError("Specified owner does not exist");
+    var project_key = data.project ? data.project : task.project;
+    var owner_key = data.owner ? data.owner : task.owner;
+
+    if (!owner_key && !project_key) {
+      return this.validationError("A task needs an owner or project");
     }
-  } else if (task.owner) {
-    owner = this.db.getUser(task.owner);
-  }
-  // TODO: Verify that creator has permissions to add tasks to owner.
-  
-  if (!owner && !project) {
-    return this.validationError("A task needs an owner or project");
-  }
-  
-  if (data.status) {
-    task.setStatus(data.status);
-  }
-  task.setData(data);
-  this.db.putTask(task);
-  this.notifyTask(task);
+
+    var finished = (function() {
+      if (data.status) {
+        task.setStatus(data.status);
+      }
+
+      task.setData(data);
+      this.db.putTask(task); // Async, naughty!
+      this.notifyTask(task);
+    }).bind(this);
+
+    var validateOwner = (function() {
+      if (owner_key) {
+        this.db.getUser(owner_key, (function(owner) {
+          if (!owner) {
+            return this.validationError("That owner does not exist");
+          }
+          // TODO: Verify that creator has permissions to add tasks to owner.
+          finished();
+        }).bind(this))
+      } else {
+        finished();
+      }
+    }).bind(this);
+
+    if (project_key) {
+      this.db.getProject(project_key, (function(project) {
+        if (!project) {
+          return this.validationError("That project does not exist");
+        }
+        if (!project.users.contains(sender)) {
+          return this.validationError("You are not a member of that project");
+        }
+        validateOwner();
+      }).bind(this));
+    } else {
+      validateOwner();
+    }
+
+  }).bind(this));
 };
 
 Server.prototype.handleUpdateProject = function(sender, data) {
-  var project = this.db.getProject(data.key);
-
-  // Get the existing project.
-  if (project) {
-    if (!project.users.contains(sender)) {
-      return validationError("You are a not a member of that project");
+  this.db.getProject(data.key, (function(project) {
+    // Get the existing project.
+    if (project) {
+      if (!project.users.contains(sender)) {
+        return validationError("You are a not a member of that project");
+      }
+    } else {
+      project = new Project();
+      project.users = [sender];
     }
-  } else {
-    project = new Project();
-    project.users = [sender];
-  }
 
-  project.setData(data);
-  this.db.putProject(project);
-  this.notifyProject(project);
+    project.setData(data);
+    this.db.putProject(project);
+    this.notifyProject(project);
+  }).bind(this));
 };
 
-Server.prototype.userCanAccessTask = function(user_key, task_key) {
-  var user = this.db.getUser(user_key);
-  var task = this.db.getTask(task_key);
+// TODO: BLERRGH!
+Server.prototype.userCanAccessTask = function(user_key, task_key, callback) {
+  this.db.getTask(task_key, (function(task) {
+    if (task.owner == user_key || task.creator == user_key) {
+      callback(false);
+    }
 
-  if (task.owner == user_key || task.creator == user_key) {
-    return true;
-  }
-
-  // Must be a project task.
-  var project = this.db.getProject(task.project);
-  return (project && project.users.contains(user_key));
-}
+    // Must be a project task.
+    this.db.getProject(task.project, function(project) {
+      callback(project && project.users.contains(user_key));
+    }.bind(this));
+  }).bind(this));
+};
 
 Server.prototype.handleDeleteTask = function(sender, data) {
-  if (!this.userCanAccessTask(sender, data.key)) {
-    return this.validationError("You do not have access to that task");
-  }
-  
-  this.notifyDeleteTask(this.tasks[data.key]);
-  this.db.deleteTask(data.key);
+  this.userCanAccessTask(sender, data.key, (function(result) {
+    if (!result) {
+      return this.validationError("You do not have access to that task");
+    }
+
+    this.db.getTask(data.key, (function(task) {
+      this.notifyDeleteTask(task);
+      this.db.deleteTask(data.key);
+    }).bind(this));
+  }).bind(this));
 };
 
 Server.prototype.handleArchiveUserTasks = function(sender, data) {
@@ -179,21 +196,24 @@ Server.prototype.handleArchiveUserTasks = function(sender, data) {
     return this.validationError("You do not have access to that user");
   }
 
-  var user = this.db.getUser(data.key);
-  if (user) {
-    user.archive_tasks_before = new Date().getTime();
-    this.notifyUser(user);
-  }
+  this.db.getUser(data.key, (function (user) {
+    if (user) {
+      user.archive_tasks_before = new Date().getTime();
+      this.notifyUser(user);
+    }
+  }).bind(this));
 };
 
 Server.prototype.handleArchiveProjectTasks = function(sender, data) {
-  var project = this.db.getProject(data.key);
-  if (!project || !project.users.contains(sender)) {
-    return this.validationError("You do not have access to that project");
-  }
+  var project = this.db.getProject(data.key, (function(project) {
+    if (!project || !project.users.contains(sender)) {
+      return this.validationError("You do not have access to that project");
+    }
 
-  project.archive_tasks_before = new Date().getTime();
-  this.notifyProject(project);
+    project.archive_tasks_before = new Date().getTime();
+    this.db.putProject(project); // Async, naughty!
+    this.notifyProject(project);
+  }).bind(this));
 };
 
 Server.prototype.handleUpdateUser = function(sender, data) {
@@ -201,11 +221,13 @@ Server.prototype.handleUpdateUser = function(sender, data) {
     return this.validationError("You do not have access to that user");
   }
 
-  var user = this.db.getUser(data.key);
-  if (user) {
-    user.setData(data);
-    this.notifyUser(user);
-  }
+  this.db.getUser(data.key, (function(user) {
+    if (user) {
+      user.setData(data);
+      this.db.putUser(user); // Async, naughty!
+      this.notifyUser(user);
+    }
+  }).bind(this));
 };
 
 Server.prototype.addConnectedClient = function(client) {
@@ -218,10 +240,18 @@ Server.prototype.addConnectedClient = function(client) {
 
 /**
  * @param client
+ * @param email
+ * @param password
  */
 Server.prototype.handleLogin = function(client, email, password) {
-  var user = this.loginUser(email, password);
-  
+  console.log("handleLogin");
+  this.loginUser(email, password, (function(user) {
+    this.sendInitialData(user, client, password);
+  }).bind(this));
+};
+
+Server.prototype.sendInitialData = function(user, client, password) {
+  console.log("sendInitialData");
   if (!user) {
     client.send({
       message_type : 'error',
@@ -238,26 +268,39 @@ Server.prototype.handleLogin = function(client, email, password) {
     users : [],
     projects : []
   };
-  var friends = this.db.getUsersForUser(client.user);
-  for (var i = 0, friend; friend = friends[i]; i++) {
-    data.users.push(friend.getData());
+
+  var completed = 0;
+  function checkComplete() {
+    completed++;
+    if (completed < 3) return;
+
+    client.send({
+      message_type : 'initial',
+      'time' : new Date().getTime(),
+      'user' : client.user.getData(),
+      'data' : data
+    });
   }
 
-  var tasks = this.db.getTasksForUser(client.user);
-  for (var i = 0, task; task = tasks[i]; i++) {
-    data.tasks.push(task.getData());
-  }
+  this.db.getUsersForUser(client.user, function(friends) {
+    for (var i = 0, friend; friend = friends[i]; i++) {
+      data.users.push(friend.getData());
+    }
+    checkComplete();
+  });
 
-  var projects = this.db.getProjectsForUser(client.user);
-  for (var i = 0, project; project = projects[i]; i++) {
-    data.projects.push(project.getData());
-  }
+  this.db.getTasksForUser(client.user, function(tasks) {
+    for (var i = 0, task; task = tasks[i]; i++) {
+      data.tasks.push(task.getData());
+    }
+    checkComplete();
+  });
 
-  return client.send({
-    message_type : 'initial',
-    'time' : new Date().getTime(),
-    'user' : client.user.getData(),
-    'data' : data
+  this.db.getProjectsForUser(client.user, function(projects) {
+    for (var i = 0, project; project = projects[i]; i++) {
+      data.projects.push(project.getData());
+    }
+    checkComplete();
   });
 };
 
@@ -312,23 +355,23 @@ Server.prototype.disconnect = function(client) {
 
 // SENDERS --------------------------------------------------------------------
 Server.prototype.notifyTask = function(task) {
-  var user_keys_list = this.db.getUserKeysForTask(task);
-
-  this.message(user_keys_list, {
-    message_type : 'update',
-    update_type : 'task',
-    data : task.getData()
-  });
+  this.db.getUserKeysForTask(task, (function(user_keys_list) {
+    this.message(user_keys_list, {
+      message_type : 'update',
+      update_type : 'task',
+      data : task.getData()
+    });
+  }).bind(this));
 };
 
 Server.prototype.notifyDeleteTask = function(task) {
-  var user_keys_list = this.db.getUserKeysForTask(task);
-
-  this.message(user_keys_list, {
-    message_type : 'delete',
-    update_type : 'task',
-    data : task.getData()
-  });
+  this.db.getUserKeysForTask(task, (function(user_keys_list) {
+    this.message(user_keys_list, {
+      message_type : 'delete',
+      update_type : 'task',
+      data : task.getData()
+    });
+  }).bind(this));
 };
 
 Server.prototype.notifyProject = function(project) {
@@ -342,20 +385,21 @@ Server.prototype.notifyProject = function(project) {
 Server.prototype.notifyUser = function(user) {
   var user_keys = [user.key];
 
-  var projects = this.db.getProjectsForUser(user);
-  for (var i = 0, project; project = projects[i]; i++) {
-    for (var u = 0, project_user; project_user = projects[i].users[u]; u++) {
-      if (project_user != user.key) {
-        user_keys.push(project_user);
+  this.db.getProjectsForUser(user, (function(projects) {
+    for (var i = 0, project; project = projects[i]; i++) {
+      for (var u = 0, project_user; project_user = projects[i].users[u]; u++) {
+        if (project_user != user.key) {
+          user_keys.push(project_user);
+        }
       }
     }
-  }
 
-  this.message(user_keys, {
-    message_type : 'update',
-    update_type : 'user',
-    data : user.getData()
-  });
+    this.message(user_keys, {
+      message_type : 'update',
+      update_type : 'user',
+      data : user.getData()
+    });
+  }).bind(this));
 };
 
 Server.prototype.message = function(users, message) {

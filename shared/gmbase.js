@@ -14,7 +14,23 @@ GMBase.Unique.S4 = function() {
 };
 GMBase.Unique.getUniqueId = function() {
   return ((new Date().getTime()) + '-' + GMBase.Unique.count++ + '-' + GMBase.Unique.S4() + '-' + GMBase.Unique.S4());
-}
+};
+
+GMBase.createBoundMethods = function(obj) {
+  for (var prop in obj) {
+    if (typeof obj[prop] == 'function') {
+      obj[prop + 'Bound'] = obj[prop].bind(obj);
+    }
+  }
+};
+
+GMBase.bindMethodsInline = function(obj) {
+  for (var prop in obj) {
+    if (typeof obj[prop] == 'function') {
+      obj[prop] = obj[prop].bind(obj);
+    }
+  }
+};
 
 /**
  * Listener adds an event interface to the object.

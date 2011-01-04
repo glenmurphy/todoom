@@ -1,5 +1,4 @@
 var fs = require('fs'),
-    io = require('./socket.io'),
     functions = require('../shared/functions.js'),
     GMBase = require('../shared/gmbase.js').GMBase,
     User = require('../shared/user_model.js').User,
@@ -11,6 +10,8 @@ function ToDB() {
   this.users = {};
   this.tasks = {};
   this.projects = {};
+
+  this.indices = {};
  
   this.load();
   setInterval(this.backup.bind(this), ToDB.SAVE_CYCLE);
@@ -76,70 +77,97 @@ ToDB.prototype.backup = function(sync) {
   }
 };
 
+// INDEX MODIFIERS AND BUILDERS -----------------------------------------------
+
 // DELETERS
 ToDB.prototype.deleteTask = function(task_key) {
   delete this.tasks[task_key];
+  // TODO: Persist to disk
+  // TODO: Update indices.
 };
 
 // PUTTERS
 ToDB.prototype.putTask = function(task) {
   this.tasks[task.key] = task;
+  // TODO: Persist to disk
   // TODO: Update indices.
 };
 
 ToDB.prototype.putProject = function(project) {
   this.projects[project.key] = project;
+  // TODO: Persist to disk
+  // TODO: Update indices.
+};
+
+ToDB.prototype.putUser = function(user) {
+  this.users[user.key] = user;
+  // TODO: Persist to disk
+  // TODO: Update indices.
 };
 
 // GETTERS --------------------------------------------------------------------
-ToDB.prototype.getUser = function(user_key) {
-  return this.users[user_key];
+ToDB.prototype.getUser = function(user_key, callback) {
+  var user = this.users[user_key];
+  setTimeout(function() {callback(user);}, 1);
 };
 
-ToDB.prototype.getUserByEmail = function(email) {
-  // TODO: Optimize
+ToDB.prototype.getUserByEmail = function(email, callback) {
+  // TODO: Index users on email addresses.
   for (var key in this.users) {
-    if (this.users[key].email == email)
-      return this.users[key];
+    if (this.users[key].email == email) {
+      var user = this.users[key];
+      setTimeout(function() {callback(user);}, 1);
+      return;
+    }
   }
 };
 
-ToDB.prototype.getProjectsForUser = function(user) {
-  // TODO: Optimize
+ToDB.prototype.getProjectsForUser = function(user, callback) {
+  // TODO: Index projects on the users they contain.
   var projects = [];
   for (var i in this.projects) {
     if (this.projects[i].users.contains(user.key)) {
       projects.push(this.projects[i]);
     }
   }
-  return projects;
+  setTimeout(function() {callback(projects);}, 1);
 };
 
-ToDB.prototype.getProject = function(project_key) {
-  return this.projects[project_key];
+ToDB.prototype.getProject = function(project_key, callback) {
+  var project = this.projects[project_key];
+  setTimeout(function() {callback(project);}, 1);
 };
 
-ToDB.prototype.getUserKeysForTask = function(task) {
+ToDB.prototype.getUserKeysForTask = function(task, callback) {
   var user_keys = {};
+
+  var finished = (function() {
+    user_keys = functions.collapseMap(user_keys);
+    setTimeout(function() {callback(user_keys);}, 1);
+  });
+
   if (task.owner) user_keys[task.owner] = true;
   if (task.creator) user_keys[task.creator] = true;
   if (task.project) {
-    var project = this.projects[task.project];
-    // TODO: Optimize.
-    for (var i = 0, user; user = project.users[i]; i++) {
-      user_keys[user] = true;
-    }
+    this.getProject(task.project, (function(project) {
+      for (var i = 0, user; user = project.users[i]; i++) {
+        user_keys[user] = true;
+      }
+      finished();
+    }).bind(this));
+  } else {
+    finished();
   }
-
-  return functions.collapseMap(user_keys);
 };
 
-ToDB.prototype.getTask = function(task_key) {
-  return this.tasks[task_key];
+ToDB.prototype.getTask = function(task_key, callback) {
+  var task = this.tasks[task_key];
+  setTimeout(function() {callback(task);}, 1);
 };
 
-ToDB.prototype.getTasksForUser = function(user) {
-  // TODO: Optimize
+ToDB.prototype.getTasksForUser = function(user, callback) {
+  // TODO: Index projects on the users they contain.
+  
   var tasks = [];
   var projects = {};
   for (var project_key in this.projects) {
@@ -150,6 +178,7 @@ ToDB.prototype.getTasksForUser = function(user) {
     }
   }
 
+  // TODO: Index tasks on owners, creators and projects.
   for (var task_key in this.tasks) {
     var task = this.tasks[task_key];
     if (task.owner == user.key || task.creator == user.key || task.project in projects) {
@@ -157,11 +186,11 @@ ToDB.prototype.getTasksForUser = function(user) {
     }
   }
 
-  return tasks;
+  setTimeout(function() {callback(tasks);}, 1);
 };
 
-ToDB.prototype.getUsersForUser = function(user) {
-  // TODO: Optimize.
+ToDB.prototype.getUsersForUser = function(user, callback) {
+  // TODO: Index projects on the users they contain.
   var user_keys = {};
   user_keys[user.key] = true;
 
@@ -178,12 +207,11 @@ ToDB.prototype.getUsersForUser = function(user) {
   }
 
   // TODO: Get all users attached to tasks that user is creator or owner of.
-
   var users = [];
   for (var key in user_keys) {
     users.push(this.users[key]);
   }
-  return users;
+  setTimeout(function() {callback(users);}, 1);
 };
 
 exports.ToDB = ToDB;
