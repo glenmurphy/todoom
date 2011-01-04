@@ -9,7 +9,6 @@ function ClientController() {
   this.socket.on('connect', this.handleConnect.bind(this));
   this.socket.on('message', this.handleMessage.bind(this));
   this.socket.on('disconnect', this.handleDisconnect.bind(this));
-  this.socket.connect();
 }
 
 GMBase.Listener.Extend(ClientController);
@@ -17,33 +16,53 @@ GMBase.Listener.Extend(ClientController);
 ClientController.prototype.login = function(email, password) {
   this.cached_email = email;
   this.cached_password = password;
-  
-  this.socket.send({
-    message_type : 'login',
-    email : email,
-    password : password
-  });
+
+  var req = new XMLHttpRequest();
+  var params = "email="+email+"&password="+password;
+  req.open("POST", "/api/login", true);
+  req.onreadystatechange = (function() {
+    if (req.readyState == 4 && req.status == 200) {
+      var result = JSON.parse(req.responseText);
+      if (result.session_key) {
+        window.localStorage['session_key'] = result.session_key;
+        this.socket.connect();
+      }
+    }
+  }).bind(this);
+  req.send(params);
+};
+
+ClientController.prototype.sessionLogin = function() {
+  this.socket.connect(); // Connection listeners will take care of sending the session key.
+};
+
+ClientController.prototype.handleSessionLoginError = function() {
+  window.localStorage.removeItem('session_key');
+  this.notifyListeners('session_login_error', {});
+  this.socket.disconnect();
 };
 
 ClientController.prototype.handleConnect = function() {
   if (this.user) {
+    window.console.log('Reconnected');
     this.notifyListeners('reconnected', {});
-    this.login(this.cached_email, this.cached_password);
+  }
+  if (window.localStorage['session_key']) {
+    window.console.log("Attempting session login");
+    this.socket.send({
+      message_type : 'session_login',
+      session_key : window.localStorage['session_key']
+    });
   }
 };
 
 ClientController.prototype.handleDisconnect = function() {
-  this.socket.connect();
-  
   if (this.user) {
     this.notifyListeners('reconnecting', {});
+    this.socket.connect();
   } else {
-    this.notifyListeners('connecting', {});
+    this.notifyListeners('disconnected', {});
   }
-};
-
-ClientController.prototype.reconnect = function() {
-  this.login(this.cached_email, this.cached_password);
 };
 
 // UI Methods -----------------------------------------------------------------
@@ -335,7 +354,9 @@ ClientController.prototype.handleMessage = function(message) {
     }
   } else if (message.message_type == 'delete') {
     this.handleDeleteTask(message.data);
-  } if (message.message_type == 'initial') {
+  } else if (message.message_type == 'session_login_error') {
+    this.handleSessionLoginError();
+  } else if (message.message_type == 'initial') {
     this.handleInitial(message);
   }
 };

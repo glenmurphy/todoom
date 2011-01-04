@@ -3,17 +3,19 @@ var http = require('http'),
     fs = require('fs'),
     io = require('socket.io'),
     crypto = require('crypto'),
+    UserManager = require("./user_manager.js").UserManager,
     functions = require('../shared/functions.js'),
     GMBase = require('../shared/gmbase.js').GMBase,
     User = require('../shared/user_model.js').User,
+    qs = require('querystring');
     Project = require('../shared/project_model.js').Project,
     Task = require('../shared/task_model.js').Task,
     ToDB = require('./todb.js').ToDB,
     sys = require(process.binding('natives').util ? 'util' : 'sys');
 
 function Server(client) {
-  this.clients = {};
   this.db = new ToDB();
+  this.users = new UserManager(this.db);
 
   process.on('SIGHUP', this.preExit.bind(this));
   process.on('SIGINT', this.preExit.bind(this));
@@ -26,56 +28,6 @@ Server.prototype.preExit = function() {
   this.db.backup(true);
   process.exit();
 }
-
-// CONNECTION AND USER --------------------------------------------------------
-Server.prototype.createUser = function(email, password) {
-  // TODO: Optimize.
-  var user = this.db.getUserByEmail(email);
-
-  if (user) {
-    if ('hash' in user) {
-     return {
-        'type' : 'error',
-        'message' : 'A user with that email address already exists'
-      }
-    }
-    // The stub already existed, so we assume that this is
-    // a user logging into that profile for the first time.
-    user.hash = this.hashFunction(email, password);
-    return user;
-  }
-
-  // If we haven't returned, they must really be a new user.
-  user = new User({
-    email : email
-  });
-  user.hash = this.hashFunction(email, password);
-  return user;
-};
-
-Server.prototype.loginUser = function(email, password, callback) {
-  this.db.getUserByEmail(email, (function(user) {
-    if (user && this.hashCheck(email, password, user))
-      callback(user);
-    else
-      callback(false);
-  }).bind(this));
-};
-
-Server.prototype.hashFunction = function(email, password) {
-  return crypto.createHash("sha256").update(email + ':' + password).digest("base64");
-};
-
-Server.prototype.hashCheck = function(email, password, user) {
-  if (!('hash' in user) || !user.hash) {
-    return false;
-  }
-
-  var login_hash = this.hashFunction(email, password);
-  var stored_version = user.hash.split(":")[0]; // For versioning.
-  var stored_hash = user.hash.substr(user.hash.indexOf(":") + 1);
-  return (stored_hash == login_hash);
-};
 
 Server.prototype.validationError = function(message) {
   console.log(message);
@@ -164,7 +116,6 @@ Server.prototype.handleUpdateProject = function(sender, data) {
   }).bind(this));
 };
 
-// TODO: BLERRGH!
 Server.prototype.userCanAccessTask = function(user_key, task_key, callback) {
   this.db.getTask(task_key, (function(task) {
     if (task.owner == user_key || task.creator == user_key) {
@@ -230,91 +181,13 @@ Server.prototype.handleUpdateUser = function(sender, data) {
   }).bind(this));
 };
 
-Server.prototype.addConnectedClient = function(client) {
-  if (client.user.key in this.clients) {
-    this.clients[client.user.key].push(client);
-  } else {
-    this.clients[client.user.key] = [client];
-  }
-};
-
-/**
- * @param client
- * @param email
- * @param password
- */
-Server.prototype.handleLogin = function(client, email, password) {
-  console.log("handleLogin");
-  this.loginUser(email, password, (function(user) {
-    this.sendInitialData(user, client, password);
-  }).bind(this));
-};
-
-Server.prototype.sendInitialData = function(user, client, password) {
-  console.log("sendInitialData");
-  if (!user) {
-    client.send({
-      message_type : 'error',
-      'error_type' : 'password'
-    });
-    return;
-  }
-
-  client.user = user;
-  this.addConnectedClient(client);
-
-  var data = {
-    tasks : [],
-    users : [],
-    projects : []
-  };
-
-  var completed = 0;
-  function checkComplete() {
-    completed++;
-    if (completed < 3) return;
-
-    client.send({
-      message_type : 'initial',
-      'time' : new Date().getTime(),
-      'user' : client.user.getData(),
-      'data' : data
-    });
-  }
-
-  this.db.getUsersForUser(client.user, function(friends) {
-    for (var i = 0, friend; friend = friends[i]; i++) {
-      data.users.push(friend.getData());
-    }
-    checkComplete();
-  });
-
-  this.db.getTasksForUser(client.user, function(tasks) {
-    for (var i = 0, task; task = tasks[i]; i++) {
-      data.tasks.push(task.getData());
-    }
-    checkComplete();
-  });
-
-  this.db.getProjectsForUser(client.user, function(projects) {
-    for (var i = 0, project; project = projects[i]; i++) {
-      data.projects.push(project.getData());
-    }
-    checkComplete();
-  });
-};
-
-Server.prototype.isUser = function(client) {
-  return ('user' in client && 'key' in client.user);
-};
-
 Server.prototype.recv = function(client, message) {
-  if (message.message_type != 'login' && !this.isUser(client)) {
+  if (message.message_type != 'session_login' && !this.users.isUser(client)) {
     return;
   }
 
-  if (message.message_type == 'login') {
-    this.handleLogin(client, message.email, message.password);
+  if (message.message_type == 'session_login') {
+    this.users.handleSessionLogin(client, message.session_key);
     return;
   }
 
@@ -342,15 +215,6 @@ Server.prototype.recv = function(client, message) {
       this.handleArchiveProjectTasks(user_key, message.data);
     }
   }
-};
-
-Server.prototype.disconnect = function(client) {
-  if (!this.isUser(client))
-    return;
-
-  var index = this.clients[client.user.key].indexOf(client);
-  if (index >= 0)
-    this.clients[client.user.key].remove(index);
 };
 
 // SENDERS --------------------------------------------------------------------
@@ -406,9 +270,8 @@ Server.prototype.message = function(users, message) {
   message.time = new Date().getTime();
 
   for (var i = 0, user_key; user_key = users[i]; i++) {
-    if (user_key in this.clients) {
-      for (var u = 0, client; client = this.clients[user_key][u]; u++) {
-        console.log("Sending to client " + u);
+    if (user_key in this.users.clients) {
+      for (var u = 0, client; client = this.users.clients[user_key][u]; u++) {
         client.send(message);
       }
     }
@@ -420,6 +283,25 @@ Server.prototype.message = function(users, message) {
 var www = http.createServer(function(req, res) {
   var path = url.parse(req.url).pathname;
   if (path == '/') path = 'index.html';
+
+  if (path.substr(0, 5) == '/api/') {
+    switch (path.substr(5)) {
+      case 'createuser':
+        break;
+      case 'login':
+        var data = '';
+        req.addListener('data', function(chunk) {
+          data += chunk;
+        });
+        req.addListener('end', function() {
+          var parsed = qs.parse(data);
+          server.users.loginUser(parsed.email, parsed.password, res);
+        });
+        break;
+      default:
+        break;
+    }
+  }
 
   if (path.substr(0, 8) == '/shared/') {
     path = '/../shared/' + path.substr(8);
@@ -445,7 +327,7 @@ socket.on('connection', function(client){
     server.recv(client, data);
   });
   client.on('disconnect', function(){
-    server.disconnect(client);
+    server.users.disconnect(client);
   });
 });
 

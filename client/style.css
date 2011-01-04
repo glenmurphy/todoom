@@ -89,6 +89,11 @@ body {
   -webkit-transform:translate(0px, -25px);
 }
 
+.signin .loading {
+  color:#999;
+  text-shadow:0px 1px 0px #fff;
+}
+
 .signin input {
   border:1px solid #aaa;
   -webkit-border-radius:4px;
