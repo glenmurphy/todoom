@@ -321,7 +321,7 @@ body {
 
 .create-field {
   width:100%;
-  padding:7px 5px 5px 29px;
+  padding:7px 5px 5px 30px;
   border-width:0;
   border-top:1px solid #ddd;
   background-color:#f6f6f6;
@@ -377,7 +377,7 @@ body {
   -webkit-box-sizing:border-box;
   border-bottom:1px solid rgba(0, 66, 200, 0.4);
   padding:1px 0px 0px 1px;
-  margin-left:-2px;
+  margin-left:-2px !important;
 }
 hr.separator {
   border:0px;
