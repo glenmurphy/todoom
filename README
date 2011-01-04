@@ -1,0 +1,9 @@
+ToDoom
+Copyright © 2011 Glen Murphy (http://glenmurphy.com/)
+
+Setup:
+npm install mongodb
+npm install socket.io
+
+To run:
+node server/server.js
