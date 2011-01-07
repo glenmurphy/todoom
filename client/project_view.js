@@ -32,3 +32,12 @@ ProjectView.prototype.createTask = function(data) {
   });
   this.add_task_field.setValue('');
 };
+
+ProjectView.prototype.addProjectUsersView = function(view) {
+  this.appendChild(view);
+};
+
+ProjectView.prototype.removeProjectUsersView = function(view) {
+  this.removeChild(view);
+  delete view;
+};

@@ -318,10 +318,10 @@ body {
   background-position:-64px -16px;
 }
 .control.users {
-  background-position:-80px 0px;
+  background-position:-96px 0px;
 }
 .control.users:hover {
-  background-position:-80px -16px;
+  background-position:-96px -16px;
 }
 
 .create-field {
@@ -393,6 +393,87 @@ hr.separator {
   text-align:right;
   color:#ddd;
 }
+
+/* PROJECTUSERSVIEW */
+.project-users {
+  position:absolute;
+  top:15px;
+  margin-left:15px;
+  margin-right:15px;
+  width:470px;
+  -webkit-transition:all 0.2s;
+  background:-webkit-gradient(linear, left top, left bottom, color-stop(0, #fcfcfc), color-stop(1, #f4f4f4));
+  border:1px solid rgba(0, 0, 0, 0.35);
+  -webkit-box-shadow:0px 1px 21px rgba(0, 0, 0, 0.35);
+}
+.minimized {
+  -webkit-transform:translate(0, -15px);
+  opacity:0;
+}
+.project-users .title {
+  margin:3px 0px 0px 5px;
+}
+.project-users .close {
+  position:absolute;
+  width:16px;
+  height:16px;
+  top:7px;
+  right:7px;
+  background-image:url(sprites.png);
+  background-repeat:no-repeat;
+  cursor:pointer;
+  overflow:visible !important;
+  background-position:0px 0px;
+}
+.project-users .close:hover {
+  background-position:0px -16px;
+}
+.users-list .user-managed {
+  padding:7px 5px 5px 30px;
+  min-height:30px;
+  -webkit-box-sizing:border-box;
+  cursor:default;
+  white-space:nowrap;
+  position:relative;
+}
+.users-list .user-managed:hover {
+  background-color:rgba(255, 255, 255, 0.5);
+}
+.user-managed:before {
+  display:block;
+  content:" ";
+  position:absolute;
+  left:8px;
+  margin-top:-1px;
+  width:16px;
+  height:16px;
+  background-image:url(sprites.png);
+  background-repeat:no-repeat;
+  background-position:-96px 0px;
+}
+.user-managed .remove {
+  display:inline-block;
+  margin-left:6px;
+  cursor:pointer;
+  color:#888;
+}
+.user-managed .remove:hover {
+  text-decoration:underline;
+}
+.add-user {
+  width:100%;
+  padding:7px 5px 5px 29px;
+  border-width:0;
+  border-top:1px solid #ddd;
+  background-color:#f0f0f0;
+  margin:0;
+  margin-top:3px;
+  font-size:inherit;
+}
+.add-user:focus {
+  outline:none;
+}
+
 
 /* TEXTFIELD */
 .textfield {

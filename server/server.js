@@ -3,6 +3,7 @@ var http = require('http'),
     fs = require('fs'),
     io = require('socket.io'),
     crypto = require('crypto'),
+    mime = require('mime'),
     UserManager = require("./user_manager.js").UserManager,
     functions = require('../shared/functions.js'),
     GMBase = require('../shared/gmbase.js').GMBase,
@@ -119,12 +120,12 @@ Server.prototype.handleUpdateProject = function(sender, data) {
 Server.prototype.userCanAccessTask = function(user_key, task_key, callback) {
   this.db.getTask(task_key, (function(task) {
     if (task.owner == user_key || task.creator == user_key) {
-      callback(false);
+      return callback(true);
     }
 
     // Must be a project task.
     this.db.getProject(task.project, function(project) {
-      callback(project && project.users.contains(user_key));
+      return callback(project && project.users.contains(user_key));
     }.bind(this));
   }).bind(this));
 };
@@ -181,6 +182,46 @@ Server.prototype.handleUpdateUser = function(sender, data) {
   }).bind(this));
 };
 
+Server.prototype.handleAddProjectUser = function(sender_key, data) {
+  var project_key = data.project_key;
+  var email = data.user_email;
+
+  var project = this.db.getProject(project_key, (function(project) {
+    if (!project || !project.users.contains(sender_key)) {
+      return this.validationError("You do not have access to that project");
+    }
+
+    var user = this.db.getOrCreateUserByEmail(email, (function(user) {
+      if (project.users.contains(user.key))
+        return;
+      project.users.push(user.key);
+      this.db.putProject(project);
+      
+      // Have to send user out first.
+      this.notifyUser(user);
+      this.notifyProject(project);
+    }).bind(this));
+  }).bind(this));
+};
+
+Server.prototype.handleRemoveProjectUser = function(sender_key, data) {
+  var project_key = data.project_key;
+  var user_key = data.user_key;
+
+  var project = this.db.getProject(project_key, (function(project) {
+    if (!project || !project.users.contains(sender_key)) {
+      return this.validationError("You do not have access to that project");
+    }
+
+    // Cannot remove first user.
+    var position = project.users.indexOf(user_key);
+    if (position > 0)
+      project.users.remove(position);
+    this.db.putProject(project);
+    this.notifyProject(project);
+  }).bind(this));
+};
+
 Server.prototype.recv = function(client, message) {
   if (message.message_type != 'session_login' && !this.users.isUser(client)) {
     return;
@@ -191,29 +232,34 @@ Server.prototype.recv = function(client, message) {
     return;
   }
 
-  var user_key = client.user.key;
+  var sender_key = client.user.key;
+  
   if (message.message_type == 'update' || message.message_type == 'create') {
     switch(message.update_type) {
       case Task.TYPE:
-        this.handleUpdateTask(user_key, message.data);
+        this.handleUpdateTask(sender_key, message.data);
         break;
       case Project.TYPE:
-        this.handleUpdateProject(user_key, message.data);
+        this.handleUpdateProject(sender_key, message.data);
         break;
       case User.TYPE:
-        this.handleUpdateUser(user_key, message.data);
+        this.handleUpdateUser(sender_key, message.data);
         break;
     }
   } else if (message.message_type == 'delete') {
     if (message.update_type == Task.TYPE) {
-      this.handleDeleteTask(user_key, message.data);
+      this.handleDeleteTask(sender_key, message.data);
     }
   } else if (message.message_type == 'archive') {
     if (message.update_type == User.TYPE) {
-      this.handleArchiveUserTasks(user_key, message.data);
+      this.handleArchiveUserTasks(sender_key, message.data);
     } else if (message.update_type == Project.TYPE) {
-      this.handleArchiveProjectTasks(user_key, message.data);
+      this.handleArchiveProjectTasks(sender_key, message.data);
     }
+  } else if (message.message_type == 'add_project_user') {
+    this.handleAddProjectUser(sender_key, message.data);
+  } else if (message.message_type == 'remove_project_user') {
+    this.handleRemoveProjectUser(sender_key, message.data);
   }
 };
 
@@ -309,9 +355,11 @@ var www = http.createServer(function(req, res) {
     path = '/../client/' + path;
   }
 
-  fs.readFile(__dirname + path, function(err, data) {
+  var file_path = __dirname + path;
+  fs.readFile(file_path, function(err, data) {
     if (err) return;
-    res.writeHead(200, {});
+    
+    res.writeHead(200, {'Content-Type':mime.lookup(file_path)});
     res.write(data, 'utf8');
     res.end();
   });

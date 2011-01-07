@@ -122,6 +122,25 @@ ToDB.prototype.getUserByEmail = function(email, callback) {
   }
 };
 
+ToDB.prototype.getOrCreateUserByEmail = function(email, callback) {
+  // TODO: Index users on email addresses.
+  for (var key in this.users) {
+    if (this.users[key].email == email) {
+      var user = this.users[key];
+      setTimeout(function() {callback(user);}, 1);
+      return;
+    }
+  }
+  
+  // Not found, create this user.
+  var user = new User();
+  user.email = email;
+  user.name = email.split("@")[0];
+  this.users[user.key] = user;
+  setTimeout(function() {callback(user);}, 1);
+  return;
+};
+
 ToDB.prototype.getProjectsForUser = function(user, callback) {
   // TODO: Index projects on the users they contain.
   var projects = [];

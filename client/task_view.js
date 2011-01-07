@@ -48,8 +48,8 @@ TaskView.prototype.setPresentationType = function(type) {
 };
 
 TaskView.prototype.updateProject = function() {
-  var project = this.controller.getProject(this.task.project);
-  if (project) {
+  if (this.task.project) {
+    var project = this.controller.getProject(this.task.project);
     this.project.innerText = project.name;
   } else {
     this.project.innerText = '';

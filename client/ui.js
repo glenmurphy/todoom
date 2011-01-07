@@ -67,7 +67,6 @@ UI.prototype.arrangeColumns = function() {
     width = this.users_column.offsetWidth + this.projects_column.offsetWidth - 12;
   }
 
-  window.console.log(width);
   // So that centering works while still scrolling properly at small sizes.
   this.body.style.minWidth = width + 'px';
 };
@@ -88,8 +87,9 @@ UI.prototype.showProjectUserManager = function(project) {
     window.console.error("Attempting to show user manager for non-visible project");
     return;
   }
+  
   var project_view = this.project_views[project.key];
-  new ProjectUserManager(this.controller, project_view, project);
+  new ProjectUsersView(this.controller, project, project_view);
 };
 
 UI.prototype.hideProject = function(project) {

@@ -2,8 +2,7 @@ ToDoom
 Copyright © 2011 Glen Murphy (http://glenmurphy.com/)
 
 Setup:
-npm install socket.io
-npm install formidable
+  npm install socket.io
 
 To run:
-node server/server.js
+  node server/server.js

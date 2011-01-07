@@ -144,6 +144,26 @@ ClientController.prototype.archiveProjectTasks = function(project) {
   });
 };
 
+ClientController.prototype.addProjectUser = function(project_key, user_email) {
+  this.socket.send({
+    message_type : 'add_project_user',
+    data : {
+      project_key : project_key,
+      user_email : user_email
+    }
+  });
+};
+
+ClientController.prototype.removeProjectUser = function(project_key, user_key) {
+  this.socket.send({
+    message_type : 'remove_project_user',
+    data : {
+      project_key : project_key,
+      user_key : user_key
+    }
+  });
+};
+
 // Creators (called by server) ------------------------------------------------
 ClientController.prototype.newProject = function(data) {
   var project = new Project(data);
@@ -178,14 +198,23 @@ ClientController.prototype.getTask = function(task_id) {
 };
 
 ClientController.prototype.getProject = function(project_id) {
-  if (!(project_id in this.projects)) return;
-
-  if (this.projects[project_id].type == Project.TYPE) {
-    return this.projects[project_id];
-  } else {
+  if (!(project_id in this.projects)) {
+    throw new Error();
     window.console.error("Not a project");
+    return;
   }
-}
+
+  return this.projects[project_id];
+};
+
+ClientController.prototype.getUser = function(user_id) {
+  if (!(user_id in this.users)) {
+    window.console.error("Not a user");
+    return;
+  }
+  
+  return this.users[user_id];
+};
 
 ClientController.prototype.getTasksForProject = function(project_id) {
   var tasks = [];
@@ -282,6 +311,7 @@ ClientController.prototype.getUsersForUser = function(user_id) {
 
 // HANDLERS -------------------------------------------------------------------
 ClientController.prototype.handleProject = function(data) {
+  window.console.log("new project");
   var key = data.key;
   if (key in this.projects) {
     this.projects[key].setData(data);
@@ -291,6 +321,7 @@ ClientController.prototype.handleProject = function(data) {
 };
 
 ClientController.prototype.handleUser = function(data) {
+  window.console.log("new user");
   var key = data.key;
   if (key in this.users) {
     this.users[key].setData(data);
