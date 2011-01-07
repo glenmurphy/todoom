@@ -293,7 +293,7 @@ body {
   width:18px;
 }
 
-.project.closing, .user.closing {
+.project.closing, .project.showing {
   -webkit-transform:translate(0, -15px);
   opacity:0;
 }

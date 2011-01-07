@@ -71,11 +71,21 @@ UI.prototype.arrangeColumns = function() {
   this.body.style.minWidth = width + 'px';
 };
 
+UI.prototype.shake = function(view) {
+  
+};
+
 UI.prototype.showProject = function(project) {
   if (project.key in this.project_views)
-    shake(this.project_views[project.key]);
+    this.shake(this.project_views[project.key]);
   else {
     var project_view = new ProjectView(this.controller, project);
+    if (!isEmpty(this.project_views)) {
+      project_view.classList.add('showing');
+      setTimeout(function() {
+        project_view.classList.remove('showing');
+      }, 1);
+    }
     this.projects_column.appendChild(project_view);
     this.project_views[project.key] = project_view;
   }
