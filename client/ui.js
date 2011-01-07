@@ -96,9 +96,19 @@ UI.prototype.hideProject = function(project) {
   if (!(project.key in this.project_views)) {
     return;
   }
-  this.projects_column.removeChild(this.project_views[project.key]);
-  delete this.project_views[project.key];
-  this.arrangeColumns();
+
+  var removeView = (function() {
+    this.projects_column.removeChild(this.project_views[project.key]);
+    delete this.project_views[project.key];
+    this.arrangeColumns();
+  }).bind(this);
+
+  if (collapseMap(this.project_views).length < 2) {
+    removeView();
+  } else {
+    this.project_views[project.key].classList.add('closing');
+    this.project_views[project.key].addEventListener('webkitTransitionEnd', removeView);
+  }
 };
 
 UI.prototype.showUser = function(user) {
