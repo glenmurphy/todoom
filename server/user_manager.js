@@ -12,9 +12,9 @@ function UserManager(db) {
 
 UserManager.prototype.createUser = function(email, password, res) {
   console.log("createUser");
-  this.db.getUserByEmail(email, (function() {
+  this.db.getUserByEmail(email, (function(user) {
     if (user) {
-      if ('hash' in user) {
+      if ('hash' in user && typeof user.hash != 'undefined') {
         this.loginError(res);
         return;
       }
@@ -30,8 +30,8 @@ UserManager.prototype.createUser = function(email, password, res) {
     if (!user.name)
       user.name = email.split("@")[0];
 
-    user.hash = this.hashLogin(email, password);
-    this.db.putUser(user, (function(user) {
+    user.hash = UserManager.hashLogin(email, password);
+    this.db.putUser(user, (function() {
       this.createSession(user, res);
     }).bind(this));
   }.bind(this)));
@@ -40,10 +40,13 @@ UserManager.prototype.createUser = function(email, password, res) {
 UserManager.prototype.loginUser = function(email, password, res) {
   console.log("loginUser");
   this.db.getUserByEmail(email, (function(user) {
-    if (user && this.hashCheck(email, password, user))
+    if (user && (user.hash == '' || typeof user.hash == 'undefined')) {
+      this.createUser(email, password, res);
+    } else if (user && this.hashCheck(email, password, user)) {
       this.createSession(user, res);
-    else
+    } else {
       this.loginError(res);
+    }
   }).bind(this));
 };
 
@@ -71,11 +74,11 @@ UserManager.prototype.createSession = function(user, res) {
   res.end();
 };
 
-UserManager.prototype.hashLogin = function(email, password) {
-  return this.hashFunction(email + ':' + password)
+UserManager.hashLogin = function(email, password) {
+  return UserManager.hashFunction(email + ':' + password)
 };
 
-UserManager.prototype.hashFunction = function(str) {
+UserManager.hashFunction = function(str) {
   return crypto.createHash("sha256").update(str).digest("base64");
 };
 
@@ -84,7 +87,7 @@ UserManager.prototype.hashCheck = function(email, password, user) {
     return false;
   }
 
-  var login_hash = this.hashLogin(email, password);
+  var login_hash = UserManager.hashLogin(email, password);
   var stored_version = user.hash.split(":")[0]; // For versioning.
   var stored_hash = user.hash.substr(user.hash.indexOf(":") + 1);
   return (stored_hash == login_hash);
@@ -121,6 +124,7 @@ UserManager.prototype.handleSessionLogin = function(client, session_key) {
 
 UserManager.prototype.sendInitialData = function(user, client) {
   console.log("sendInitialData");
+  
   client.user = user;
   this.addConnectedClient(client);
 

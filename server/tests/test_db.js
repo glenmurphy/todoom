@@ -15,7 +15,7 @@ function ToDBTest(db) {
     user1 : new User({
       key : 'user1',
       name : 'User One',
-      email : 'glen@glenmurphy.com'
+      email : 'user@user.com'
     }),
     user2 : new User({
       key : 'user2',
@@ -245,6 +245,8 @@ ToDBTest.prototype.testGetProjectsForUser = function(cb) {
 
       projects = functions.generateModelMap(projects);
       test.assert_models_equal(projects.project1, data.project1, "Project 1 present");
+      test.assert_equal(projects.project1.users.length, data.project1.users.length, "Project 1 user list");
+      console.log(projects.project1.users);
       test.assert_models_equal(projects.project3, data.project3, "Project 3 present");
 
       db.getProjectsForUser(data.user2, this);
@@ -409,16 +411,16 @@ Step(
     sql_db = new ToDBSQL('todoom_test', true, this.parallel());
     js_db = new ToDB('./todoom_test', true, this.parallel());
   },
-  function testSQLDB() {
-    test.begin_test("SQL DB Test");
-    var sql_test = new ToDBTest(sql_db);
-    sql_test.runTest(this);
-  },
   function testJSDB() {
-    test.end();
     test.begin_test("JS DB Test");
     var js_test = new ToDBTest(js_db);
     js_test.runTest(this);
+  },
+  function testSQLDB() {
+    test.end();
+    test.begin_test("SQL DB Test");
+    var sql_test = new ToDBTest(sql_db);
+    sql_test.runTest(this);
   },
   function end() {
     test.end();

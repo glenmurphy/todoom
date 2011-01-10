@@ -135,7 +135,11 @@ GMBase.Model.Constructor = function(template) {
   GMBase.Listener.Extend(f);
   
   return f;
-}
+};
+
+GMBase.Model.prototype.getPropertiesList = function() {
+  return this._properties;
+};
 
 GMBase.Model.prototype.getData = function() {
   var data = {

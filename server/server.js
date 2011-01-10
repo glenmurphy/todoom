@@ -27,7 +27,7 @@ GMBase.Listener.Extend(Server);
 Server.prototype.preExit = function() {
   console.log('Exiting...');
   process.exit();
-}
+};
 
 Server.prototype.validationError = function(message) {
   console.log(message);
@@ -103,7 +103,7 @@ Server.prototype.handleUpdateProject = function(sender, data) {
     // Get the existing project.
     if (project) {
       if (!project.users.contains(sender)) {
-        return validationError("You are a not a member of that project");
+        return this.validationError("You are a not a member of that project");
       }
     } else {
       project = new Project();
@@ -150,6 +150,7 @@ Server.prototype.handleArchiveUserTasks = function(sender, data) {
   this.db.getUser(data.key, (function (user) {
     if (user) {
       user.archive_tasks_before = new Date().getTime();
+      this.db.putUser(user);
       this.notifyUser(user);
     }
   }).bind(this));

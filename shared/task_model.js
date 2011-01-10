@@ -10,9 +10,9 @@ Task = GMBase.Model.Constructor({
     'description' : '',
     'status' : 0,
     'archived' : false,
-    'project' : null,
-    'creator' : null,
-    'owner' : null,
+    'project' : '',
+    'creator' : '',
+    'owner' : '',
     'completed_date' : 0
   },
   type : 'task'

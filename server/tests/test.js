@@ -46,6 +46,43 @@ function assert_true(a, description) {
   }
 }
 
+function isArray(obj) {
+   if (obj.constructor.toString().indexOf("Array") == -1)
+      return false;
+   else
+      return true;
+}
+
+function areArraysEqual(array1, array2) {
+   var temp = new Array();
+   if ( (!array1[0]) || (!array2[0]) ) { // If either is not an array
+      return false;
+   }
+   if (array1.length != array2.length) {
+      return false;
+   }
+   // Put all the elements from array1 into a "tagged" array
+   for (var i=0; i<array1.length; i++) {
+      key = (typeof array1[i]) + "~" + array1[i];
+   // Use "typeof" so a number 1 isn't equal to a string "1".
+      if (temp[key]) { temp[key]++; } else { temp[key] = 1; }
+   // temp[key] = # of occurrences of the value (so an element could appear multiple times)
+   }
+   // Go through array2 - if same tag missing in "tagged" array, not equal
+   for (var i=0; i<array2.length; i++) {
+      key = (typeof array2[i]) + "~" + array2[i];
+      if (temp[key]) {
+         if (temp[key] == 0) { return false; } else { temp[key]--; }
+      // Subtract to keep track of # of appearances in array2
+      } else { // Key didn't appear in array1, arrays are not equal.
+         return false;
+      }
+   }
+   // If we get to this point, then every generated key in array1 showed up the exact same
+   // number of times in array2, so the arrays are equal.
+   return true;
+}
+
 function assert_models_equal(a, b, description) {
   var failed = false;
 
@@ -60,15 +97,15 @@ function assert_models_equal(a, b, description) {
     log_failed(description + " types don't match");
   }
 
-  if (a._properties.length != b._properties.length) {
-    failed = true;
-    log_failed(description + " properties don't match");
-  }
-
-  for (var i = 0, key; key = a._properties[i]; i++) {
-    if (a[key] != b[key]) {
+  for (var key in a._properties) {
+    if (isArray(a[key])) {
+      if (!areArraysEqual(a[key], b[key])) {
+        failed = true;
+        log_failed(description + " array: '" + key + "' mismatch - '" + a[key] + "' != '" + b[key] + "'");
+      }
+    } else if (a[key] != b[key]) {
       failed = true;
-      log_failed(description + " key:" + key + " mismatch - " + a[key] + " != " + b[key]);
+      log_failed(description + " key: '" + key + "' mismatch - '" + a[key] + "' != '" + b[key] + "'");
     }
   }
 

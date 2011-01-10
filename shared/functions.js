@@ -80,6 +80,14 @@ function collapseMap(map) {
   return list;
 }
 
+function generateListFromMap(map) {
+  var list = [];
+  for (var id in map) {
+    list.push(map[id]);
+  }
+  return list;
+}
+
 function generateMap(list) {
   var map = {};
   for (var i = 0, item; item = list[i]; i++) {
@@ -120,6 +128,7 @@ var ServerTime = {
 
 if (typeof exports != 'undefined') {
   exports.collapseMap = collapseMap;
+  exports.generateListFromMap = generateListFromMap;
   exports.generateMap = generateMap;
   exports.generateModelMap = generateModelMap;
 }
