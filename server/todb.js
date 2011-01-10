@@ -6,27 +6,32 @@ var fs = require('fs'),
     Task = require('../shared/task_model.js').Task,
     sys = require(process.binding('natives').util ? 'util' : 'sys');
 
-function ToDB() {
+function ToDB(filename, clear, cb) {
   this.users = {};
   this.tasks = {};
   this.projects = {};
 
   this.indices = {};
+
+  this.filename = filename ? filename : ToDB.BACKUP_FILE;
+  this.old_filename = this.filename + ".old";
  
   this.load();
   setInterval(this.backup.bind(this), ToDB.SAVE_CYCLE);
+
+  if (cb)
+    cb();
 }
 
 ToDB.SAVE_CYCLE = 1000 * 60 * 20;
 ToDB.BACKUP_FILE = './data/todoom.json';
-ToDB.OLDFILE = './data/todoom.old';
 
 GMBase.Listener.Extend(ToDB);
 
 // STATE SAVING AND LOADING ---------------------------------------------------
 ToDB.prototype.load = function() {
   try {
-    var text = fs.readFileSync(ToDB.BACKUP_FILE);
+    var text = fs.readFileSync(this.filename);
     var data = JSON.parse(text);
 
     for (var user_key in data.users) {
@@ -66,13 +71,13 @@ ToDB.prototype.backup = function(sync) {
 
   if (sync) {
     try {
-      fs.renameSync(ToDB.BACKUP_FILE, ToDB.OLDFILE);
+      fs.renameSync(this.filename, this.old_filename);
     } catch(e) {}
-    fs.writeFileSync(ToDB.BACKUP_FILE, JSON.stringify(data));
+    fs.writeFileSync(this.filename, JSON.stringify(data));
   } else {
-    fs.rename(ToDB.BACKUP_FILE, ToDB.OLDFILE, function(err) {
+    fs.rename(this.filename, this.old_filename, function(err) {
       if (err) console.log(err);
-      fs.writeFile(ToDB.BACKUP_FILE, JSON.stringify(data));
+      fs.writeFile(this.filename, JSON.stringify(data));
     });
   }
 };

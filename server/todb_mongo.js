@@ -20,7 +20,7 @@ ToDBMongo.prototype.handleError = function(err) {
   console.log(err);
 };
 
-// new (require('./todb-mongo.js').ToDBMongo);
+// new (require('./todb_mongo.js').ToDBMongo);
 ToDBMongo.prototype.handleDBOpen = function(err, db) {
   if (err) {
     this.handleError(err);

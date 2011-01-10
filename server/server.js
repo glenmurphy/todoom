@@ -11,7 +11,7 @@ var http = require('http'),
     qs = require('querystring');
     Project = require('../shared/project_model.js').Project,
     Task = require('../shared/task_model.js').Task,
-    ToDB = require('./todb.js').ToDB,
+    ToDB = require('./todb_sql.js').ToDBSQL,
     sys = require(process.binding('natives').util ? 'util' : 'sys');
 
 function Server(client) {
@@ -26,7 +26,6 @@ GMBase.Listener.Extend(Server);
 
 Server.prototype.preExit = function() {
   console.log('Exiting...');
-  this.db.backup(true);
   process.exit();
 }
 

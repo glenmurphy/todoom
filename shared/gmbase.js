@@ -174,6 +174,18 @@ GMBase.Model.prototype.append = function(key, value) {
   }
 };
 
+GMBase.Model.prototype.equal = function(obj, logFunc) {
+  for (var key in this._properties) {
+    if (obj[key] != this[key]) {
+      if (logFunc) {
+        logFunc(key + ':' + obj[key] + ' != ' + this[key]);
+      }
+      return false;
+    }
+  }
+  return true;
+};
+
 /*
  * DOMObject allows you to use an object as a JS object and as a DOM
  * node simultaneously; it's based on work by Erik Arvidsson because

@@ -80,6 +80,22 @@ function collapseMap(map) {
   return list;
 }
 
+function generateMap(list) {
+  var map = {};
+  for (var i = 0, item; item = list[i]; i++) {
+    map[item] = item;
+  }
+  return map;
+}
+
+function generateModelMap(list) {
+  var map = {};
+  for (var i = 0, item; item = list[i]; i++) {
+    map[item.key] = item;
+  }
+  return map;
+}
+
 var ServerTime = {
   time_offset : 0,
   offset_history : [],
@@ -104,4 +120,6 @@ var ServerTime = {
 
 if (typeof exports != 'undefined') {
   exports.collapseMap = collapseMap;
+  exports.generateMap = generateMap;
+  exports.generateModelMap = generateModelMap;
 }
