@@ -333,6 +333,14 @@ var www = http.createServer(function(req, res) {
   if (path.substr(0, 5) == '/api/') {
     switch (path.substr(5)) {
       case 'createuser':
+        var data = '';
+        req.addListener('data', function(chunk) {
+          data += chunk;
+        });
+        req.addListener('end', function() {
+          var parsed = qs.parse(data);
+          server.users.createUser(parsed.email, parsed.password, res);
+        });
         break;
       case 'login':
         var data = '';

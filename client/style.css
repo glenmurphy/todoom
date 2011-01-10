@@ -97,7 +97,20 @@ body {
   opacity:1;
   -webkit-transition:all 0.2s;
 }
-
+.signin .subitem {
+  width:300px;
+  position:absolute;
+  bottom:-40px;
+  font-size:11px;
+  left:0px;
+  text-align:center;
+  text-decoration:underline;
+  cursor:pointer;
+  color:#888;
+}
+.signin .subitem:hover {
+  color:#444;
+}
 .signin.hidden {
   display:block;
   opacity:0;

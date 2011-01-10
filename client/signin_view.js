@@ -11,6 +11,18 @@ SignInView.prototype.constructor_ = function(controller) {
   this.controller.addListener('signin_error', this.handleSignInError_.bind(this));
   this.controller.addListener('session_login_error', this.handleSignInError_.bind(this));
 
+  this.menu_create = createElement('div', 'subitem', this);
+  this.menu_create.innerText = "or create an account...";
+  this.menu_create.addEventListener('click', (function() {
+    this.showPage(this.create_page);
+  }).bind(this));
+
+  this.menu_signin = createElement('div', 'subitem', this);
+  this.menu_signin.innerText = "or create an account...";
+  this.menu_signin.addEventListener('click', (function() {
+    this.showPage(this.login_page);
+  }).bind(this));
+
   this.loading = createElement('div', 'loading', this);
   this.loading.innerText = 'connecting...';
 
@@ -27,6 +39,27 @@ SignInView.prototype.constructor_ = function(controller) {
 
   this.login_page.appendChild(this.input_email);
   this.login_page.appendChild(this.input_password);
+
+  this.create_page = createElement('div', 'page-create', this);
+  this.input_create_email = new InputField('');
+  this.input_create_email.setPlaceholder('email');
+  this.input_create_email.name = 'email';
+
+  this.input_create_password = new InputField('');
+  this.input_create_password.setType('password');
+  this.input_create_password.setPlaceholder('password');
+  this.input_create_password.name = 'password';
+
+  this.input_create_password2 = new InputField('');
+  this.input_create_password2.setType('password');
+  this.input_create_password2.setPlaceholder('password');
+  this.input_create_password2.name = 'password';
+
+  this.input_create_password2.addListener('submit', this.handleCreateInput_.bind(this));
+  
+  this.create_page.appendChild(this.input_create_email);
+  this.create_page.appendChild(this.input_create_password);
+  this.create_page.appendChild(this.input_create_password2);
   
   if ('session_key' in window.localStorage) {
     this.controller.sessionLogin();
@@ -48,9 +81,25 @@ SignInView.prototype.showPage = function(page) {
     this.loading.classList.remove('hidden') :
     this.loading.classList.add('hidden');
 
-  this.login_page == page ?
-    this.login_page.classList.remove('hidden') :
+  if (this.login_page == page) {
+    this.menu_create.classList.remove('hidden');
+    this.login_page.classList.remove('hidden')
+  } else {
+    this.menu_create.classList.add('hidden');
     this.login_page.classList.add('hidden');
+  }
+
+  if (this.create_page == page) {
+    this.menu_signin.classList.remove('hidden');
+    this.create_page.classList.remove('hidden');
+  } else {
+    this.menu_signin.classList.add('hidden');
+    this.create_page.classList.add('hidden');
+  }
+};
+
+SignInView.prototype.handleMenuCreateClicked = function() {
+  this.showPage(this.create_page);
 };
 
 SignInView.prototype.handleSignInSuccess_ = function(data) {
@@ -69,4 +118,18 @@ SignInView.prototype.handleSignInError_ = function(data) {
 SignInView.prototype.handleInput_ = function(username) {
   window.localStorage['signin_email'] = this.input_email.value;
   this.controller.login(this.input_email.value, this.input_password.value);
+};
+
+
+/**
+ * Called by InputBlock when text is entered - attempts to log in.
+ * @param {String} username
+ */
+SignInView.prototype.handleCreateInput_ = function(username) {
+  if (this.input_create_password.value != this.input_create_password2.value) {
+    shake(this);
+    return;
+  }
+  window.localStorage['signin_email'] = this.input_create_email.value;
+  this.controller.create(this.input_create_email.value, this.input_create_password.value);
 };

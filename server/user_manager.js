@@ -12,20 +12,11 @@ function UserManager(db) {
 
 UserManager.prototype.createUser = function(email, password, res) {
   console.log("createUser");
-  this.db.getUserByEmail(email, (function(user) {
-    if (user) {
-      if ('hash' in user && typeof user.hash != 'undefined') {
-        this.loginError(res);
-        return;
-      }
-      // The stub already existed, so we assume that this is
-      // a user logging into that profile for the first time.
-      // (fall through).
-    } else {
-      // If we haven't returned, they must really be a new user.
-      user = new User({
-        email : email
-      });
+  this.db.getOrCreateUserByEmail(email, (function(user) {
+    console.log(user);
+    if (user && 'hash' in user && typeof user.hash != 'undefined') {
+      this.loginError(res);
+      return;
     }
     if (!user.name)
       user.name = email.split("@")[0];
@@ -40,9 +31,7 @@ UserManager.prototype.createUser = function(email, password, res) {
 UserManager.prototype.loginUser = function(email, password, res) {
   console.log("loginUser");
   this.db.getUserByEmail(email, (function(user) {
-    if (user && (user.hash == '' || typeof user.hash == 'undefined')) {
-      this.createUser(email, password, res);
-    } else if (user && this.hashCheck(email, password, user)) {
+    if (user && this.hashCheck(email, password, user)) {
       this.createSession(user, res);
     } else {
       this.loginError(res);

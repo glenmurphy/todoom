@@ -26,6 +26,29 @@ ClientController.prototype.login = function(email, password) {
       if (result.session_key) {
         window.localStorage['session_key'] = result.session_key;
         this.socket.connect();
+      } else {
+        this.notifyListeners('signin_error', {});
+      }
+    }
+  }).bind(this);
+  req.send(params);
+};
+
+ClientController.prototype.create = function(email, password) {
+  this.cached_email = email;
+  this.cached_password = password;
+
+  var req = new XMLHttpRequest();
+  var params = "email="+email+"&password="+password;
+  req.open("POST", "/api/createuser", true);
+  req.onreadystatechange = (function() {
+    if (req.readyState == 4 && req.status == 200) {
+      var result = JSON.parse(req.responseText);
+      if (result.session_key) {
+        window.localStorage['session_key'] = result.session_key;
+        this.socket.connect();
+      } else {
+        this.notifyListeners('signin_error', {});
       }
     }
   }).bind(this);

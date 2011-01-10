@@ -10,7 +10,7 @@ var DBClient = require('mysql').Client,
 function ToDBSQL(db_name, clear, callback) {
   this.db = new DBClient();
   this.db.user = 'root';
-  this.db.password = '';
+  this.db.password = 'mansini';
   this.db.host = '127.0.0.1';
   this.db.port = 3306;
 
@@ -237,7 +237,7 @@ ToDBSQL.prototype.getUser = function(user_key, callback) {
 };
 
 ToDBSQL.prototype.getUserByEmail = function(email, callback) {
-  this.db.query("SELECT * FROM USERS WHERE email = ? LIMIT 1", [email], function(err, results) {
+  this.db.query("SELECT * FROM users WHERE email = ? LIMIT 1", [email], function(err, results) {
     if (results.length == 0) {
       callback(false);
       return;
