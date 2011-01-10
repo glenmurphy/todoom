@@ -18,7 +18,7 @@ SignInView.prototype.constructor_ = function(controller) {
   }).bind(this));
 
   this.menu_signin = createElement('div', 'subitem', this);
-  this.menu_signin.innerText = "or create an account...";
+  this.menu_signin.innerText = "or sign in...";
   this.menu_signin.addEventListener('click', (function() {
     this.showPage(this.login_page);
   }).bind(this));

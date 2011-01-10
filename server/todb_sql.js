@@ -15,7 +15,13 @@ function ToDBSQL(db_name, clear, callback) {
   this.db.port = 3306;
 
   this.db_name = db_name ? db_name : 'todoom';
-  this.db.connect(this.init_.bind(this, clear, callback));
+  this.db.connect((function(err, result) {
+    if (err) {
+      console.log(err);
+      return;
+    }
+    this.init_(clear, callback);
+  }).bind(this));
 }
 
 ToDBSQL.prototype.init_ = function(clear, callback) {
@@ -174,7 +180,7 @@ ToDBSQL.userFromResult = function(res) {
   user.key = res.user_id;
   user.name = res.name;
   user.email = res.email;
-  user.hash = res.hash;
+  user.hash = res.password_hash;
   user.archive_tasks_before = res.archive_tasks_before;
   return user;
 };
@@ -227,7 +233,7 @@ ToDBSQL.taskFromResult = function(res) {
 };
 
 ToDBSQL.prototype.getUser = function(user_key, callback) {
-  this.db.query("SELECT * FROM USERS WHERE user_id = ? LIMIT 1", [user_key], function(err, results) {
+  this.db.query("SELECT * FROM users WHERE user_id = ? LIMIT 1", [user_key], function(err, results) {
     if (results.length == 0) {
       callback(false);
       return;
@@ -247,7 +253,7 @@ ToDBSQL.prototype.getUserByEmail = function(email, callback) {
 };
 
 ToDBSQL.prototype.getOrCreateUserByEmail = function(email, callback) {
-  this.db.query("SELECT * FROM USERS WHERE email = ? LIMIT 1", [email], (function(err, results) {
+  this.db.query("SELECT * FROM users WHERE email = ? LIMIT 1", [email], (function(err, results) {
     if (results.length == 0) {
       // Not found, create this user.
       var user = new User();
@@ -339,7 +345,7 @@ ToDBSQL.prototype.getTasksForUser = function(user, callback) {
         var model = ToDBSQL.taskFromResult(task);
         tasks[model.key] = model;
       }
-      db.query("SELECT * FROM TASKS WHERE owner = ? OR creator = ?", [user.key, user.key], this);
+      db.query("SELECT * FROM tasks WHERE owner = ? OR creator = ?", [user.key, user.key], this);
     },
     function gotTasks(err, results) {
       for (var i = 0, task; task = results[i]; i++) {

@@ -136,6 +136,7 @@ UserManager.prototype.sendInitialData = function(user, client) {
   }
 
   this.db.getUsersForUser(client.user, function(friends) {
+    if (!friends) {checkComplete(); return;}
     for (var i = 0, friend; friend = friends[i]; i++) {
       data.users.push(friend.getData());
     }
@@ -143,6 +144,7 @@ UserManager.prototype.sendInitialData = function(user, client) {
   });
 
   this.db.getTasksForUser(client.user, function(tasks) {
+    if (!tasks) {checkComplete(); return;}
     for (var i = 0, task; task = tasks[i]; i++) {
       data.tasks.push(task.getData());
     }
@@ -150,6 +152,7 @@ UserManager.prototype.sendInitialData = function(user, client) {
   });
 
   this.db.getProjectsForUser(client.user, function(projects) {
+    if (!projects) {checkComplete(); return;}
     for (var i = 0, project; project = projects[i]; i++) {
       data.projects.push(project.getData());
     }
