@@ -3,6 +3,8 @@ Copyright © 2011 Glen Murphy (http://glenmurphy.com/)
 
 Setup:
   npm install socket.io
+  npm install mime
+  npm install mysql
   npm install step
 
 To run:
