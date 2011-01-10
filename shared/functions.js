@@ -69,7 +69,10 @@ function getPosition(node) {
 }
 
 function shake(node) {
-  
+  node.classList.add('shake');
+  setTimeout(function() {
+    node.classList.remove('shake');
+  }, 1000);
 }
 
 function collapseMap(map) {
