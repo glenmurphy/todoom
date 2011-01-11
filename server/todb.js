@@ -113,7 +113,7 @@ ToDB.prototype.putUser = function(user) {
 // GETTERS --------------------------------------------------------------------
 ToDB.prototype.getUser = function(user_key, callback) {
   var user = this.users[user_key];
-  setTimeout(function() {callback(user);}, 1);
+  setTimeout(function() {callback(null, user);}, 1);
 };
 
 ToDB.prototype.getUserByEmail = function(email, callback) {
@@ -121,7 +121,7 @@ ToDB.prototype.getUserByEmail = function(email, callback) {
   for (var key in this.users) {
     if (this.users[key].email == email) {
       var user = this.users[key];
-      setTimeout(function() {callback(user);}, 1);
+      setTimeout(function() {callback(null, user);}, 1);
       return;
     }
   }
@@ -132,7 +132,7 @@ ToDB.prototype.getOrCreateUserByEmail = function(email, callback) {
   for (var key in this.users) {
     if (this.users[key].email == email) {
       var user = this.users[key];
-      setTimeout(function() {callback(user);}, 1);
+      setTimeout(function() {callback(null, user);}, 1);
       return;
     }
   }
@@ -142,7 +142,7 @@ ToDB.prototype.getOrCreateUserByEmail = function(email, callback) {
   user.email = email;
   user.name = email.split("@")[0];
   this.users[user.key] = user;
-  setTimeout(function() {callback(user);}, 1);
+  setTimeout(function() {callback(null, user);}, 1);
   return;
 };
 
@@ -154,12 +154,12 @@ ToDB.prototype.getProjectsForUser = function(user, callback) {
       projects.push(this.projects[i]);
     }
   }
-  setTimeout(function() {callback(projects);}, 1);
+  setTimeout(function() {callback(null, projects);}, 1);
 };
 
 ToDB.prototype.getProject = function(project_key, callback) {
   var project = this.projects[project_key];
-  setTimeout(function() {callback(project);}, 1);
+  setTimeout(function() {callback(null, project);}, 1);
 };
 
 ToDB.prototype.getUserKeysForTask = function(task, callback) {
@@ -167,13 +167,13 @@ ToDB.prototype.getUserKeysForTask = function(task, callback) {
 
   var finished = (function() {
     user_keys = functions.collapseMap(user_keys);
-    setTimeout(function() {callback(user_keys);}, 1);
+    setTimeout(function() {callback(null, user_keys);}, 1);
   });
 
   if (task.owner) user_keys[task.owner] = true;
   if (task.creator) user_keys[task.creator] = true;
   if (task.project) {
-    this.getProject(task.project, (function(project) {
+    this.getProject(task.project, (function(err, project) {
       for (var i = 0, user; user = project.users[i]; i++) {
         user_keys[user] = true;
       }
@@ -186,7 +186,7 @@ ToDB.prototype.getUserKeysForTask = function(task, callback) {
 
 ToDB.prototype.getTask = function(task_key, callback) {
   var task = this.tasks[task_key];
-  setTimeout(function() {callback(task);}, 1);
+  setTimeout(function() {callback(null, task);}, 1);
 };
 
 ToDB.prototype.getTasksForUser = function(user, callback) {
@@ -210,7 +210,7 @@ ToDB.prototype.getTasksForUser = function(user, callback) {
     }
   }
 
-  setTimeout(function() {callback(tasks);}, 1);
+  setTimeout(function() {callback(null, tasks);}, 1);
 };
 
 ToDB.prototype.getUsersForUser = function(user, callback) {
@@ -235,7 +235,7 @@ ToDB.prototype.getUsersForUser = function(user, callback) {
   for (var key in user_keys) {
     users.push(this.users[key]);
   }
-  setTimeout(function() {callback(users);}, 1);
+  setTimeout(function() {callback(null, users);}, 1);
 };
 
 exports.ToDB = ToDB;

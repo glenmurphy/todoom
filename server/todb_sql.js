@@ -37,7 +37,8 @@ ToDBSQL.prototype.init_ = function(clear, callback) {
       function use() {
         db.query("USE " + db_name, this);
       },
-      function createUsers() {
+      function createUsers(err, result) {
+        if (err) console.log(err);
         db.query("CREATE TABLE users ("+
                  "  user_id VARCHAR(255) NOT NULL UNIQUE," +
                  "  name VARCHAR(255)," +
@@ -47,7 +48,8 @@ ToDBSQL.prototype.init_ = function(clear, callback) {
                  "  PRIMARY KEY(user_id)" +
                  ") ENGINE=INNODB;", this);
       },
-      function createProjects() {
+      function createProjects(err, result) {
+        if (err) console.log(err);
         db.query("CREATE TABLE projects (" +
                  "  project_id VARCHAR(255) NOT NULL UNIQUE," +
                  "  name VARCHAR(255)," +
@@ -55,7 +57,8 @@ ToDBSQL.prototype.init_ = function(clear, callback) {
                  "  PRIMARY KEY(project_id)" +
                  ") ENGINE=INNODB;", this);
       },
-      function createTasks() {
+      function createTasks(err, result) {
+        if (err) console.log(err);
         db.query("CREATE TABLE tasks (" +
                "  task_id VARCHAR(255) NOT NULL UNIQUE," +
                "  name VARCHAR(255)," +
@@ -66,11 +69,15 @@ ToDBSQL.prototype.init_ = function(clear, callback) {
                "  creator VARCHAR(255)," +
                "  owner VARCHAR(255)," +
                "  completed_date BIGINT," +
-               "  PRIMARY KEY (task_id, project, owner, creator)," +
+               "  PRIMARY KEY (task_id)," +
+               "  INDEX(project)," +
+               "  INDEX(creator)," +
+               "  INDEX(owner)," +
                "  FOREIGN KEY (creator) REFERENCES users(user_id)" +
                ") ENGINE=INNODB;", this);
       },
-      function createProjectUsers() {
+      function createProjectUsers(err, result) {
+        if (err) console.log(err);
         db.query("CREATE TABLE project_users (" +
                  "  project_id VARCHAR(255)," +
                  "  user_id VARCHAR(255)," +
@@ -79,7 +86,8 @@ ToDBSQL.prototype.init_ = function(clear, callback) {
                  "  FOREIGN KEY (user_id) REFERENCES users(user_id)" +
                  ") ENGINE=INNODB;", this);
       },
-      function insertGlen() {
+      function insertGlen(err, result) {
+        if (err) console.log(err);
         db.query("INSERT INTO users (user_id, name, email) VALUES (?, ?, ?)",
             ['glen1', 'Glen Murphy', 'glen@glenmurphy.com'], this);
       },
@@ -111,15 +119,35 @@ ToDBSQL.prototype.deleteTask = function(task_key, cb) {
 };
 
 // PUTTERS
-ToDBSQL.prototype.putTask = function(task, cb) {
-  console.log("Putting task " + task.key);
+ToDBSQL.prototype.putTask = function(data, cb) {
+  console.log("Putting task " + data.key);
   this.db.query("INSERT INTO tasks " +
       "(task_id, name, description, status, archived, project, creator, owner, completed_date) VALUES " +
       "(?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE " +
       "task_id = ?, name = ?, description = ?, status = ?, archived = ?, project = ?, creator = ?, owner = ?, completed_date = ?",
-      [task.key, task.name, task.description, task.status, task.archived, task.project, task.creator, task.owner, task.completed_date,
-       task.key, task.name, task.description, task.status, task.archived, task.project, task.creator, task.owner, task.completed_date], cb);
+      [data.key, data.name, data.description, data.status, data.archived, data.project, data.creator, data.owner, data.completed_date,
+       data.key, data.name, data.description, data.status, data.archived, data.project, data.creator, data.owner, data.completed_date], cb);
 };
+
+ToDBSQL.prototype.updateTask = function(data, cb) {
+  var valid_fields = ['name', 'description', 'status', 'archived', 'project', 'creator', 'owner', 'completed_date'];
+  var query = "UPDATE tasks SET ";
+  var updates = [];
+  for (var key in data) {
+    if (key == 'key') continue;
+    if (valid_fields.contains(key)) {
+      updates.push(key + " = " + this.db.escape(data[key]));
+    }
+  }
+  if (updates.length == 0) {
+    if (cb) cb();
+    return;
+  }
+  query += updates.join(", ");
+  query += " WHERE task_id = " + this.db.escape(data.key);
+  console.log(query);
+  this.db.query(query, cb);
+}
 
 ToDBSQL.prototype.putProject = function(project, cb) {
   console.log("Putting project " + project.key);
@@ -233,22 +261,26 @@ ToDBSQL.taskFromResult = function(res) {
 };
 
 ToDBSQL.prototype.getUser = function(user_key, callback) {
+  if (!user_key) {
+    if (callback) callback();
+    return;
+  }
   this.db.query("SELECT * FROM users WHERE user_id = ? LIMIT 1", [user_key], function(err, results) {
     if (results.length == 0) {
-      callback(false);
+      callback(null, false);
       return;
     }
-    callback(ToDBSQL.userFromResult(results[0]));
+    callback(null, ToDBSQL.userFromResult(results[0]));
   });
 };
 
 ToDBSQL.prototype.getUserByEmail = function(email, callback) {
   this.db.query("SELECT * FROM users WHERE email = ? LIMIT 1", [email], function(err, results) {
     if (results.length == 0) {
-      callback(false);
+      callback(null, false);
       return;
     }
-    callback(ToDBSQL.userFromResult(results[0]));
+    callback(null, ToDBSQL.userFromResult(results[0]));
   });
 };
 
@@ -260,10 +292,10 @@ ToDBSQL.prototype.getOrCreateUserByEmail = function(email, callback) {
       user.email = email;
       user.name = email.split("@")[0];
       this.putUser(user);
-      callback(user);
+      callback(null, user);
       return;
     }
-    callback(ToDBSQL.userFromResult(results[0]));
+    callback(null, ToDBSQL.userFromResult(results[0]));
   }).bind(this));
 };
 
@@ -273,22 +305,26 @@ ToDBSQL.prototype.getProjectsForUser = function(user, callback) {
                 " WHERE projects.project_id = p1.project_id AND p1.user_id = ? AND p2.project_id = p1.project_id;",
                 [user.key],
     function(err, results) {
-      if (err) {callback(false); return;}
+      if (err) {callback(err, false); return;}
 
-      callback(ToDBSQL.projectsFromResults(results));
+      callback(null, ToDBSQL.projectsFromResults(results));
     }
   );
 };
 
 ToDBSQL.prototype.getProject = function(project_key, callback) {
+  if (!project_key) {
+    if (callback) callback();
+    return;
+  }
   this.db.query("SELECT * FROM projects, project_users WHERE projects.project_id = ? AND project_users.project_id = ?", [project_key, project_key],
     function(err, results) {
-      if (err) {callback(false); return;}
+      if (err) {callback(err, false); return;}
       var projects = ToDBSQL.projectsFromResults(results);
       if (projects)
-        callback(projects[0]);
+        callback(null, projects[0]);
       else
-        callback();
+        callback(null);
     }
   );
 };
@@ -305,13 +341,13 @@ ToDBSQL.prototype.getUserKeysForTask = function(task, callback) {
 
   var finished = (function() {
     user_keys = functions.collapseMap(user_keys);
-    setTimeout(function() {callback(user_keys);}, 1);
+    setTimeout(function() {callback(null, user_keys);}, 1);
   });
 
   if (task.owner) user_keys[task.owner] = true;
   if (task.creator) user_keys[task.creator] = true;
   if (task.project) {
-    this.getProject(task.project, (function(project) {
+    this.getProject(task.project, (function(err, project) {
       for (var i = 0, user; user = project.users[i]; i++) {
         user_keys[user] = true;
       }
@@ -325,7 +361,7 @@ ToDBSQL.prototype.getUserKeysForTask = function(task, callback) {
 ToDBSQL.prototype.getTask = function(task_key, callback) {
   this.db.query("SELECT * FROM tasks WHERE task_id = ? LIMIT 1", [task_key],
     function(err, results) {
-      callback(ToDBSQL.taskFromResult(results[0]));
+      callback(null, ToDBSQL.taskFromResult(results[0]));
     }
   );
 };
@@ -352,7 +388,7 @@ ToDBSQL.prototype.getTasksForUser = function(user, callback) {
         var model = ToDBSQL.taskFromResult(task);
         tasks[model.key] = model;
       }
-      callback(functions.generateListFromMap(tasks));
+      callback(null, functions.generateListFromMap(tasks));
     }
   );
 };
@@ -366,7 +402,7 @@ ToDBSQL.prototype.getUsersForUser = function(user, callback) {
     for (var i = 0, user; user = results[i]; i++) {
       users.push(ToDBSQL.userFromResult(user));
     }
-    callback(users);
+    callback(null, users);
   });
 };
 

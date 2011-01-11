@@ -12,9 +12,8 @@ function UserManager(db) {
 
 UserManager.prototype.createUser = function(email, password, res) {
   console.log("createUser");
-  this.db.getOrCreateUserByEmail(email, (function(user) {
-    console.log(user);
-    if (user && 'hash' in user && typeof user.hash != 'undefined') {
+  this.db.getOrCreateUserByEmail(email, (function(err, user) {
+    if (user && !!(user.hash)) {
       this.loginError(res);
       return;
     }
@@ -22,7 +21,7 @@ UserManager.prototype.createUser = function(email, password, res) {
       user.name = email.split("@")[0];
 
     user.hash = UserManager.hashLogin(email, password);
-    this.db.putUser(user, (function() {
+    this.db.putUser(user, (function(err) {
       this.createSession(user, res);
     }).bind(this));
   }.bind(this)));
@@ -30,7 +29,7 @@ UserManager.prototype.createUser = function(email, password, res) {
 
 UserManager.prototype.loginUser = function(email, password, res) {
   console.log("loginUser");
-  this.db.getUserByEmail(email, (function(user) {
+  this.db.getUserByEmail(email, (function(err, user) {
     if (user && this.hashCheck(email, password, user)) {
       this.createSession(user, res);
     } else {
@@ -100,7 +99,7 @@ UserManager.prototype.handleSessionLogin = function(client, session_key) {
       });
       return;
     }
-    this.db.getUser(this.sessions[session_key].user_key, (function(user) {
+    this.db.getUser(this.sessions[session_key].user_key, (function(err, user) {
       this.sendInitialData(user, client);
     }).bind(this));
   } else {
@@ -135,7 +134,7 @@ UserManager.prototype.sendInitialData = function(user, client) {
     });
   }
 
-  this.db.getUsersForUser(client.user, function(friends) {
+  this.db.getUsersForUser(client.user, function(err, friends) {
     if (!friends) {checkComplete(); return;}
     for (var i = 0, friend; friend = friends[i]; i++) {
       data.users.push(friend.getData());
@@ -143,7 +142,7 @@ UserManager.prototype.sendInitialData = function(user, client) {
     checkComplete();
   });
 
-  this.db.getTasksForUser(client.user, function(tasks) {
+  this.db.getTasksForUser(client.user, function(err, tasks) {
     if (!tasks) {checkComplete(); return;}
     for (var i = 0, task; task = tasks[i]; i++) {
       data.tasks.push(task.getData());
@@ -151,7 +150,7 @@ UserManager.prototype.sendInitialData = function(user, client) {
     checkComplete();
   });
 
-  this.db.getProjectsForUser(client.user, function(projects) {
+  this.db.getProjectsForUser(client.user, function(err, projects) {
     if (!projects) {checkComplete(); return;}
     for (var i = 0, project; project = projects[i]; i++) {
       data.projects.push(project.getData());

@@ -158,11 +158,11 @@ ToDBTest.prototype.testGetUser = function(cb) {
     function getUser() {
       db.getUser(data.user1.key, this);
     },
-    function gotUser(user) {
+    function gotUser(err, user) {
       test.assert_models_equal(user, data.user1, "Get user one");
       db.getUser(data.user2.key, this)
     },
-    function gotUser(user) {
+    function gotUser(err, user) {
       test.assert_models_equal(user, data.user2, "Get user one");
       cb();
     }
@@ -178,11 +178,11 @@ ToDBTest.prototype.testGetProject = function(cb) {
     function getProject() {
       db.getProject(data.project1.key, this);
     },
-    function gotProject(project) {
+    function gotProject(err, project) {
       test.assert_models_equal(project, data.project1, "Get project one");
       db.getProject(data.project2.key, this)
     },
-    function gotProject(project) {
+    function gotProject(err, project) {
       test.assert_models_equal(project, data.project2, "Get project two");
       cb();
     }
@@ -198,11 +198,11 @@ ToDBTest.prototype.testGetTask = function(cb) {
     function getTask() {
       db.getTask(data.task1.key, this);
     },
-    function gotTask(task) {
+    function gotTask(err, task) {
       test.assert_models_equal(task, data.task1, "Get task one");
       db.getTask(data.task2.key, this)
     },
-    function gotTask(task) {
+    function gotTask(err, task) {
       test.assert_models_equal(task, data.task2, "Get task two");
       cb();
     }
@@ -217,15 +217,15 @@ ToDBTest.prototype.testGetOrCreateUserByEmail = function(cb) {
     function getExistingUser() {
       db.getOrCreateUserByEmail(data.user1.email, this);
     },
-    function gotUser(user) {
+    function gotUser(err, user) {
       test.assert_models_equal(user, data.user1, "Get existing user by email");
       db.getOrCreateUserByEmail("ely.lauren@gmail.com", this);
     },
-    function createdUser(user) {
+    function createdUser(err, user) {
       test.assert_equal(user.email, "ely.lauren@gmail.com", "Created user");
       db.getUser(user.key, this);
     },
-    function getCreatedUser(user) {
+    function getCreatedUser(err, user) {
       test.assert_equal(user.email, "ely.lauren@gmail.com", "Get created user");
       cb();
     }
@@ -240,7 +240,7 @@ ToDBTest.prototype.testGetProjectsForUser = function(cb) {
     function getExistingUser() {
       db.getProjectsForUser(data.user1, this);
     },
-    function gotProjects(projects) {
+    function gotProjects(err, projects) {
       test.assert_equal(projects.length, 2, "Number of projects");
 
       projects = functions.generateModelMap(projects);
@@ -251,7 +251,7 @@ ToDBTest.prototype.testGetProjectsForUser = function(cb) {
 
       db.getProjectsForUser(data.user2, this);
     },
-    function gotProjects(projects) {
+    function gotProjects(err, projects) {
       test.assert_equal(projects.length, 2, "Number of projects");
 
       projects = functions.generateModelMap(projects);
@@ -270,14 +270,14 @@ ToDBTest.prototype.testGetUserKeysForTask = function(cb) {
     function getKeys() {
       db.getUserKeysForTask(data.task1, this);
     },
-    function gotKeys(keys) {
+    function gotKeys(err, keys) {
       // Task1 should only be visible to User1.
       test.assert_equal(keys.length, 1, "Number of keys");
       test.assert_equal(keys[0], data.user1.key, "Assigned to user one");
 
       db.getUserKeysForTask(data.task2, this);
     },
-    function gotKeys(keys) {
+    function gotKeys(err, keys) {
       // Task1 should be visible to all members of Project1 (user1 and 2)
       test.assert_equal(keys.length, 2, "Number of keys");
       keys = functions.generateMap(keys);
@@ -297,14 +297,14 @@ ToDBTest.prototype.testGetUserKeysForTask = function(cb) {
     function getKeys() {
       db.getUserKeysForTask(data.task1, this);
     },
-    function gotKeys(keys) {
+    function gotKeys(err, keys) {
       // Task1 should only be visible to User1.
       test.assert_equal(keys.length, 1, "Number of keys");
       test.assert_equal(keys[0], data.user1.key, "Assigned to user one");
 
       db.getUserKeysForTask(data.task2, this);
     },
-    function gotKeys(keys) {
+    function gotKeys(err, keys) {
       // Task1 should be visible to all members of Project1 (user1 and 2)
       test.assert_equal(keys.length, 2, "Number of keys");
       keys = functions.generateMap(keys);
@@ -325,7 +325,7 @@ ToDBTest.prototype.testGetTasksForUser = function(cb) {
       test.log("Getting tasks for user one");
       db.getTasksForUser(data.user1, this);
     },
-    function gotTasks(tasks) {
+    function gotTasks(err, tasks) {
       // User 1 should see tasks 1,2 and 3.
       test.assert_equal(tasks.length, 3, "Number of tasks");
 
@@ -338,7 +338,7 @@ ToDBTest.prototype.testGetTasksForUser = function(cb) {
       test.log("Getting tasks for user two");
       db.getTasksForUser(data.user2, this);
     },
-    function gotTasks(tasks) {
+    function gotTasks(err, tasks) {
       // User 2 should see tasks 2, 3, 4, 5.
       test.assert_equal(tasks.length, 4, "Number of tasks");
 
@@ -352,7 +352,7 @@ ToDBTest.prototype.testGetTasksForUser = function(cb) {
       test.log("Getting tasks for user three");
       db.getTasksForUser(data.user3, this);
     },
-    function gotTasks(tasks) {
+    function gotTasks(err, tasks) {
       // User 3 should see tasks 4 and 5.
       test.assert_equal(tasks.length, 2, "Number of tasks");
 
@@ -376,7 +376,7 @@ ToDBTest.prototype.testGetUsersForUser = function(cb) {
       test.log("Getting users for user one");
       db.getUsersForUser(data.user1, this);
     },
-    function gotUsers(users) {
+    function gotUsers(err, users) {
       // User 1 should see users 1, 2 and 3.
       test.assert_equal(users.length, 3, "Number of users");
 
@@ -389,7 +389,7 @@ ToDBTest.prototype.testGetUsersForUser = function(cb) {
       test.log("Getting users for user four");
       db.getUsersForUser(data.user4, this);
     },
-    function gotUsers(users) {
+    function gotUsers(err, users) {
       // User 4 should see users 3 and 4 (from project 4).
       test.assert_equal(users.length, 2, "Number of users");
 

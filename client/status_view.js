@@ -88,7 +88,7 @@ StatusView.prototype.handleChange = function(data) {
 };
 
 StatusView.prototype.handleClaim = function() {
-  this.controller.claimTask(this.task);
+  this.controller.changeValue(this.task, 'owner', this.controller.user.key);
 };
 
 StatusView.prototype.handleButtonNotStarted = function() {
@@ -111,22 +111,24 @@ StatusView.prototype.handleButtonFinish = function() {
   this.controller.changeValue(this.task, 'status', Task.STATUS_FINISHED);
 };
 
+StatusView.prototype.handleClaimStatus = function(status) {
+  this.controller.changeValues(this.task, {
+    'owner' : this.controller.user.key,
+    'status' : status
+  });
+};
 
 StatusView.prototype.handleButtonClaimStart = function() {
-  this.handleClaim();
-  this.controller.changeValue(this.task, 'status', Task.STATUS_STARTED);
+  this.handleClaimStatus(Task.STATUS_STARTED);
 };
 
 StatusView.prototype.handleButtonClaimPause = function() {
-  this.handleClaim();
-  this.controller.changeValue(this.task, 'status', Task.STATUS_PAUSED);
+  this.handleClaimStatus(Task.STATUS_PAUSED);
 };
 
 StatusView.prototype.handleButtonClaimFinish = function() {
-  this.handleClaim();
-  this.controller.changeValue(this.task, 'status', Task.STATUS_FINISHED);
+  this.handleClaimStatus(Task.STATUS_FINISHED);
 };
-
 
 StatusView.prototype.handleButtonArchive = function() {
   this.controller.changeValue(this.task, 'archived', true);

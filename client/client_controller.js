@@ -5,7 +5,7 @@ function ClientController() {
   this.tasks = {};
   this.projects = {};
 
-  this.socket = new io.Socket();
+  this.socket = new io.Socket(null, {rememberTransport : false});
   this.socket.on('connect', this.handleConnect.bind(this));
   this.socket.on('message', this.handleMessage.bind(this));
   this.socket.on('disconnect', this.handleDisconnect.bind(this));
@@ -56,10 +56,12 @@ ClientController.prototype.create = function(email, password) {
 };
 
 ClientController.prototype.sessionLogin = function() {
+  window.console.log("sessionLogin");
   this.socket.connect(); // Connection listeners will take care of sending the session key.
 };
 
 ClientController.prototype.handleSessionLoginError = function() {
+  window.console.log("sessionLoginError");
   window.localStorage.removeItem('session_key');
   this.notifyListeners('session_login_error', {});
   this.socket.disconnect();
@@ -118,10 +120,6 @@ ClientController.prototype.createTask = function(data) {
   this.socket.send(message);
 };
 
-ClientController.prototype.claimTask = function(task) {
-  this.changeValue(task, 'owner', this.user.key);
-};
-
 ClientController.prototype.changeValue = function(model, key_name, value) {
   if (model[key_name] == value) return;
   
@@ -134,6 +132,17 @@ ClientController.prototype.changeValue = function(model, key_name, value) {
   };
   
   message.data[key_name] = value;
+  this.socket.send(message);
+};
+
+ClientController.prototype.changeValues = function(model, data) {
+  var message = {
+    message_type : 'update',
+    update_type : model.type,
+    data : data
+  };
+
+  data.key = model.key;
   this.socket.send(message);
 };
 

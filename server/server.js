@@ -8,7 +8,8 @@ var http = require('http'),
     functions = require('../shared/functions.js'),
     GMBase = require('../shared/gmbase.js').GMBase,
     User = require('../shared/user_model.js').User,
-    qs = require('querystring');
+    qs = require('querystring'),
+    Step = require('step'),
     Project = require('../shared/project_model.js').Project,
     Task = require('../shared/task_model.js').Task,
     ToDB = require('./todb_sql.js').ToDBSQL,
@@ -37,69 +38,94 @@ Server.prototype.validationError = function(message) {
 // DATA HANDLING --------------------------------------------------------------
 Server.prototype.handleUpdateTask = function(sender, data) {
   var task;
-  var owner;
-  var project;
+  var new_task = false;
+  var owner, owner_key;
+  var project, project_key;
 
-  // Purge any unused data fields.
+  // Purge any invalid data fields.
   delete data.creator;
 
-  // Get the existing task.
-  this.db.getTask(data.key, (function(task) {
-    if (!task) {
-      task = new Task();
-      task.creator = sender;
-    }
+  // Handle the date update if the task is finished.
+  if (data.status) {
+    if (data.status == Task.STATUS_FINISHED)
+      data.completed_date = new Date().getTime();
+    else
+      data.completed_date = 0;
+  }
 
-    var project_key = data.project ? data.project : task.project;
-    var owner_key = data.owner ? data.owner : task.owner;
+  var self = this;
 
-    if (!owner_key && !project_key) {
-      return this.validationError("A task needs an owner or project");
-    }
+  Step(
+    function getTask() {
+      self.db.getTask(data.key, this);
+    },
 
-    var finished = (function() {
-      if (data.status) {
-        task.setStatus(data.status);
+    function gotTask(err, task) {
+      if (err) throw err;
+      console.log("gotTask");
+      
+      if (!task) {
+        task = new Task();
+        task.creator = sender;
+        task.setData(data);
+        data = task.getData();
+        new_task = true;
       }
 
-      task.setData(data);
-      this.db.putTask(task); // Async, naughty!
-      this.notifyTask(task);
-    }).bind(this);
+      project_key = data.project ? data.project : task.project;
+      owner_key = data.owner ? data.owner : task.owner;
 
-    var validateOwner = (function() {
-      if (owner_key) {
-        this.db.getUser(owner_key, (function(owner) {
-          if (!owner) {
-            return this.validationError("That owner does not exist");
-          }
-          // TODO: Verify that creator has permissions to add tasks to owner.
-          finished();
-        }).bind(this))
-      } else {
-        finished();
+      if (!project_key && !owner_key) {
+        throw "A task needs an owner or project";
       }
-    }).bind(this);
 
-    if (project_key) {
-      this.db.getProject(project_key, (function(project) {
-        if (!project) {
-          return this.validationError("That project does not exist");
-        }
-        if (!project.users.contains(sender)) {
-          return this.validationError("You are not a member of that project");
-        }
-        validateOwner();
-      }).bind(this));
-    } else {
-      validateOwner();
+      self.db.getProject(project_key, this.parallel());
+      self.db.getUser(owner_key, this.parallel());
+    },
+
+    function validate(err, project, owner) {
+      if (err) throw err;
+      console.log("validate");
+      
+      if (project && !project.users.contains(sender))
+        throw "Sender not in project";
+      if (owner && project && !project.users.contains(owner.key))
+        throw "Owner not in project";
+      
+      return true;
+      // TODO: validate that owner is in friends network.
+    },
+
+    function putData(err, success) {
+      if (err) throw err;
+      console.log("putData1");
+
+      if (new_task)
+        self.db.putTask(data, this);
+      else
+        self.db.updateTask(data, this);
+    },
+
+    function putData(err) {
+      if (err) throw err;
+      console.log("putData2");
+
+      self.db.getTask(data.key, this)
+    },
+      
+    function finished(err, task) {
+      if (err) {
+        console.log(err);
+        return;
+      }
+      console.log("finished");
+      self.notifyTask(task);
     }
-
-  }).bind(this));
+  );
 };
 
 Server.prototype.handleUpdateProject = function(sender, data) {
-  this.db.getProject(data.key, (function(project) {
+  this.db.getProject(data.key, (function(err, project) {
     // Get the existing project.
     if (project) {
       if (!project.users.contains(sender)) {
@@ -117,13 +143,13 @@ Server.prototype.handleUpdateProject = function(sender, data) {
 };
 
 Server.prototype.userCanAccessTask = function(user_key, task_key, callback) {
-  this.db.getTask(task_key, (function(task) {
+  this.db.getTask(task_key, (function(err, task) {
     if (task.owner == user_key || task.creator == user_key) {
       return callback(true);
     }
 
     // Must be a project task.
-    this.db.getProject(task.project, function(project) {
+    this.db.getProject(task.project, function(err, project) {
       return callback(project && project.users.contains(user_key));
     }.bind(this));
   }).bind(this));
@@ -135,7 +161,7 @@ Server.prototype.handleDeleteTask = function(sender, data) {
       return this.validationError("You do not have access to that task");
     }
 
-    this.db.getTask(data.key, (function(task) {
+    this.db.getTask(data.key, (function(err, task) {
       this.notifyDeleteTask(task);
       this.db.deleteTask(data.key);
     }).bind(this));
@@ -147,7 +173,7 @@ Server.prototype.handleArchiveUserTasks = function(sender, data) {
     return this.validationError("You do not have access to that user");
   }
 
-  this.db.getUser(data.key, (function (user) {
+  this.db.getUser(data.key, (function (err, user) {
     if (user) {
       user.archive_tasks_before = new Date().getTime();
       this.db.putUser(user);
@@ -157,7 +183,7 @@ Server.prototype.handleArchiveUserTasks = function(sender, data) {
 };
 
 Server.prototype.handleArchiveProjectTasks = function(sender, data) {
-  var project = this.db.getProject(data.key, (function(project) {
+  var project = this.db.getProject(data.key, (function(err, project) {
     if (!project || !project.users.contains(sender)) {
       return this.validationError("You do not have access to that project");
     }
@@ -173,7 +199,7 @@ Server.prototype.handleUpdateUser = function(sender, data) {
     return this.validationError("You do not have access to that user");
   }
 
-  this.db.getUser(data.key, (function(user) {
+  this.db.getUser(data.key, (function(err, user) {
     if (user) {
       user.setData(data);
       this.db.putUser(user); // Async, naughty!
@@ -186,12 +212,12 @@ Server.prototype.handleAddProjectUser = function(sender_key, data) {
   var project_key = data.project_key;
   var email = data.user_email;
 
-  var project = this.db.getProject(project_key, (function(project) {
+  var project = this.db.getProject(project_key, (function(err, project) {
     if (!project || !project.users.contains(sender_key)) {
       return this.validationError("You do not have access to that project");
     }
 
-    var user = this.db.getOrCreateUserByEmail(email, (function(user) {
+    var user = this.db.getOrCreateUserByEmail(email, (function(err, user) {
       if (project.users.contains(user.key))
         return;
       project.users.push(user.key);
@@ -208,7 +234,7 @@ Server.prototype.handleRemoveProjectUser = function(sender_key, data) {
   var project_key = data.project_key;
   var user_key = data.user_key;
 
-  var project = this.db.getProject(project_key, (function(project) {
+  var project = this.db.getProject(project_key, (function(err, project) {
     if (!project || !project.users.contains(sender_key)) {
       return this.validationError("You do not have access to that project");
     }
@@ -265,7 +291,7 @@ Server.prototype.recv = function(client, message) {
 
 // SENDERS --------------------------------------------------------------------
 Server.prototype.notifyTask = function(task) {
-  this.db.getUserKeysForTask(task, (function(user_keys_list) {
+  this.db.getUserKeysForTask(task, (function(err, user_keys_list) {
     this.message(user_keys_list, {
       message_type : 'update',
       update_type : 'task',
@@ -275,7 +301,7 @@ Server.prototype.notifyTask = function(task) {
 };
 
 Server.prototype.notifyDeleteTask = function(task) {
-  this.db.getUserKeysForTask(task, (function(user_keys_list) {
+  this.db.getUserKeysForTask(task, (function(err, user_keys_list) {
     this.message(user_keys_list, {
       message_type : 'delete',
       update_type : 'task',
@@ -295,7 +321,7 @@ Server.prototype.notifyProject = function(project) {
 Server.prototype.notifyUser = function(user) {
   var user_keys = [user.key];
 
-  this.db.getProjectsForUser(user, (function(projects) {
+  this.db.getProjectsForUser(user, (function(err, projects) {
     for (var i = 0, project; project = projects[i]; i++) {
       for (var u = 0, project_user; project_user = projects[i].users[u]; u++) {
         if (project_user != user.key) {
