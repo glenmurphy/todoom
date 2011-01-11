@@ -3,6 +3,7 @@ body {
   font-size:12px;
   background-color:#ebebeb;
   margin-top:40px;
+  overflow-y: scroll;
 }
 
 /* Global classes, can be added to anything */
