@@ -75,13 +75,13 @@ UI.prototype.arrangeColumns = function() {
     this.topbar.classList.add('projects');
     this.topbar.classList.remove('full');
   }
-  else if (!isEmpty(this.user_views) && isEmpty(this.project_views)) {
-    this.topbar.classList.remove('projects');
-    this.topbar.classList.remove('full');
-  }
-  else {
+  else if (!isEmpty(this.user_views) && !isEmpty(this.project_views)) {
     this.topbar.classList.add('full');
     this.topbar.classList.remove('projects');
+  }
+  else {
+    this.topbar.classList.remove('projects');
+    this.topbar.classList.remove('full');
   }
   
   // So that centering works while still scrolling properly at small sizes.
