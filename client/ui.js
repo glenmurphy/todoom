@@ -29,9 +29,14 @@ function UI(controller) {
   this.menu_projects.innerHTML = 'Projects';
   this.menu_projects.addEventListener('click', this.handleProjectsClick.bind(this));
 
+  //this.menu_logout = createElement('div', 'control', this.topbar);
+  //this.menu_logout.innerHTML = 'Log out';
+  //this.menu_logout.addEventListener('click', this.handleLogoutClick.bind(this));
+
   this.controller.addListener('new_project', this.handleNewProject.bind(this));
   this.controller.addListener('signin_success', this.handleSignInSuccess.bind(this));
-
+  this.controller.addListener('logout', this.handleLogout.bind(this));
+  
   this.signin = new SignInView(this.controller);
 
   UI.instance = this;
@@ -173,6 +178,22 @@ UI.prototype.handleSignInSuccess = function() {
   this.showUser(this.controller.user);
 };
 
+UI.prototype.handleLogout = function() {
+  this.topbar.classList.add('hidden');
+  while (this.users_column.firstChild) {
+    this.users_column.removeChild(this.users_column.firstChild);
+  }
+  while (this.projects_column.firstChild) {
+    this.projects_column.removeChild(this.projects_column.firstChild);
+  }
+  for (var key in this.project_views) {
+    delete this.project_views[key];
+  }
+  for (var key in this.user_views) {
+    delete this.user_views[key];
+  }
+};
+
 UI.prototype.handleProjectsClick = function() {
   var params = [];
   var projects = this.controller.getProjectsForUser();
@@ -203,6 +224,10 @@ UI.prototype.handleUsersClick = function() {
     });
   }
   new Menu(this.menu_users, params);
+};
+
+UI.prototype.handleLogoutClick = function() {
+  this.controller.logout();
 };
 
 UI.prototype.handleCreateProjectClick = function() {

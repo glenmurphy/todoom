@@ -67,6 +67,16 @@ ClientController.prototype.handleSessionLoginError = function() {
   this.socket.disconnect();
 };
 
+ClientController.prototype.logout = function() {
+  window.localStorage.removeItem('session_key');
+  this.user = null;
+  this.users = {};
+  this.tasks = {};
+  this.projects = {};
+  this.socket.disconnect();
+  this.notifyListeners('logout', {});
+};
+
 ClientController.prototype.handleConnect = function() {
   if (this.user) {
     window.console.log('Reconnected');

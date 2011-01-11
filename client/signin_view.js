@@ -10,6 +10,7 @@ SignInView.prototype.constructor_ = function(controller) {
   this.controller.addListener('signin_success', this.handleSignInSuccess_.bind(this));
   this.controller.addListener('signin_error', this.handleSignInError_.bind(this));
   this.controller.addListener('session_login_error', this.handleSignInError_.bind(this));
+  this.controller.addListener('logout', this.handleLogout_.bind(this));
 
   this.menu_create = createElement('div', 'subitem', this);
   this.menu_create.innerText = "or create an account...";
@@ -66,7 +67,7 @@ SignInView.prototype.constructor_ = function(controller) {
   this.input_create.type = 'button';
   this.input_create.value = 'Create account';
   this.input_create.addEventListener('click', this.handleCreate_.bind(this));
-  
+
   this.create_page.appendChild(this.input_create_email);
   this.create_page.appendChild(this.input_create_password);
   this.create_page.appendChild(this.input_create_password2);
@@ -115,6 +116,14 @@ SignInView.prototype.handleMenuCreateClicked = function() {
 
 SignInView.prototype.handleSignInSuccess_ = function(data) {
   this.classList.add('hidden');
+};
+
+SignInView.prototype.handleLogout_ = function() {
+  this.input_password.value = '';
+  this.input_create_password.value = '';
+  this.input_create_password2.value = '';
+  this.showPage(this.login_page);
+  this.classList.remove('hidden');
 };
 
 SignInView.prototype.handleSignInError_ = function(data) {
