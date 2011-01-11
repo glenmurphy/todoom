@@ -2,7 +2,7 @@ body {
   font-family:helvetica, arial, sans-serif;
   font-size:12px;
   background:#ebebeb -webkit-gradient(linear, left top, left bottom, color-stop(0, #f6f6f6), color-stop(0.4, #f0f0f0), color-stop(1, #e0e0e0));
-  margin-top:40px;
+  margin-top:4px;
   overflow-y: scroll;
 }
 
@@ -194,6 +194,7 @@ body {
   min-width:874px;
 }
 .col-users {
+  margin-top:44px;
   display:block;
   width:362px;
   -webkit-transition:all 0.35s;
@@ -211,6 +212,7 @@ body {
   margin-left:-181px;
 }
 .col-projects {
+  margin-top:44px;
   display:block;
   width:512px;
   -webkit-transition:all 0.35s;

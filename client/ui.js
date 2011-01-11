@@ -6,7 +6,9 @@ function UI(controller) {
   this.controller = controller;
   this.controller.addListener('new_project', this.handleNewProject.bind(this));
 
-  this.topbar = createElement('div', 'ui-nav hidden', document.body);
+  this.body = createElement('div', 'main', document.body);
+
+  this.topbar = createElement('div', 'ui-nav hidden', this.body);
 
   this.title = createElement('div', 'ui-title', this.topbar);
   this.title.innerText = 'ToDoom';
@@ -16,7 +18,6 @@ function UI(controller) {
   this.project_views = {};
   this.user_views = {};
 
-  this.body = createElement('div', 'main', document.body);
   this.users_column = createElement('div', 'col-users solo', this.body);
   this.projects_column = createElement('div', 'col-projects solo', this.body);
 
