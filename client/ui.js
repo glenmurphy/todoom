@@ -93,8 +93,9 @@ UI.prototype.shake = function(view) {
 };
 
 UI.prototype.showProject = function(project) {
+  var project_view;
   if (project.key in this.project_views)
-    this.shake(this.project_views[project.key]);
+    project_view = this.project_views[project.key];
   else {
     var project_view = new ProjectView(this.controller, project);
     if (!isEmpty(this.project_views)) {
@@ -103,9 +104,10 @@ UI.prototype.showProject = function(project) {
         project_view.classList.remove('showing');
       }, 1);
     }
-    this.projects_column.appendChild(project_view);
+
     this.project_views[project.key] = project_view;
   }
+  this.projects_column.insertBefore(project_view, this.projects_column.childNodes[0]);
   this.arrangeColumns();
 };
 
