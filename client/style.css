@@ -1,7 +1,7 @@
 body {
   font-family:helvetica, arial, sans-serif;
   font-size:12px;
-  background-color:#ebebeb;
+  background:#ebebeb -webkit-gradient(linear, left top, left bottom, color-stop(0, #f6f6f6), color-stop(0.4, #f0f0f0), color-stop(1, #e0e0e0));
   margin-top:40px;
   overflow-y: scroll;
 }
