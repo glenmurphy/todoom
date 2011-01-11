@@ -221,11 +221,13 @@ Server.prototype.handleAddProjectUser = function(sender_key, data) {
       if (project.users.contains(user.key))
         return;
       project.users.push(user.key);
-      this.db.putProject(project);
       
-      // Have to send user out first.
-      this.notifyUser(user);
-      this.notifyProject(project);
+      var self = this;
+      this.db.putProject(project, function(err) {
+        // Have to send user out first.
+        self.notifyUser(user);
+        self.notifyProject(project);
+      });
     }).bind(this));
   }).bind(this));
 };
@@ -238,10 +240,13 @@ Server.prototype.handleRemoveProjectUser = function(sender_key, data) {
     if (!project || !project.users.contains(sender_key)) {
       return this.validationError("You do not have access to that project");
     }
+    
+    if (project.users.length < 2 && user_key == sender_key) {
+      return this.validationError("Cannot yet remove self from project if last person");
+    }
 
-    // Cannot remove first user.
     var position = project.users.indexOf(user_key);
-    if (position > 0)
+    if (position > -1)
       project.users.remove(position);
     this.db.putProject(project);
     this.notifyProject(project);
