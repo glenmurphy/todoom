@@ -182,7 +182,10 @@ UI.prototype.handleProjectsClick = function() {
       clickHandler : this.showProject.bind(this, project)
     });
   }
-  params.push({});
+
+  if (params.length > 0)
+    params.push({});
+
   params.push({
     name : 'New project...',
     clickHandler : this.handleCreateProjectClick.bind(this)

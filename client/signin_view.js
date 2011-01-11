@@ -35,10 +35,16 @@ SignInView.prototype.constructor_ = function(controller) {
   this.input_password.setType('password');
   this.input_password.setPlaceholder('password');
   this.input_password.name = 'password';
-  this.input_password.addListener('submit', this.handleInput_.bind(this));
+  this.input_password.addListener('submit', this.handleLogin_.bind(this));
+
+  this.input_login = createElement('input', 'signin-button');
+  this.input_login.type = 'button';
+  this.input_login.value = 'Sign in';
+  this.input_login.addEventListener('click', this.handleLogin_.bind(this));
 
   this.login_page.appendChild(this.input_email);
   this.login_page.appendChild(this.input_password);
+  this.login_page.appendChild(this.input_login);
 
   this.create_page = createElement('div', 'page-create', this);
   this.input_create_email = new InputField('');
@@ -54,12 +60,17 @@ SignInView.prototype.constructor_ = function(controller) {
   this.input_create_password2.setType('password');
   this.input_create_password2.setPlaceholder('password');
   this.input_create_password2.name = 'password';
+  this.input_create_password2.addListener('submit', this.handleCreate_.bind(this));
 
-  this.input_create_password2.addListener('submit', this.handleCreateInput_.bind(this));
+  this.input_create = createElement('input', 'signin-button');
+  this.input_create.type = 'button';
+  this.input_create.value = 'Create account';
+  this.input_create.addEventListener('click', this.handleCreate_.bind(this));
   
   this.create_page.appendChild(this.input_create_email);
   this.create_page.appendChild(this.input_create_password);
   this.create_page.appendChild(this.input_create_password2);
+  this.create_page.appendChild(this.input_create);
   
   if ('session_key' in window.localStorage) {
     this.controller.sessionLogin();
@@ -115,7 +126,12 @@ SignInView.prototype.handleSignInError_ = function(data) {
  * Called by InputBlock when text is entered - attempts to log in.
  * @param {String} username
  */
-SignInView.prototype.handleInput_ = function(username) {
+SignInView.prototype.handleLogin_ = function(username) {
+  if (!this.input_email.value || !this.input_password.value) {
+    shake(this);
+    return;
+  }
+  
   window.localStorage['signin_email'] = this.input_email.value;
   this.controller.login(this.input_email.value, this.input_password.value);
 };
@@ -125,7 +141,12 @@ SignInView.prototype.handleInput_ = function(username) {
  * Called by InputBlock when text is entered - attempts to log in.
  * @param {String} username
  */
-SignInView.prototype.handleCreateInput_ = function(username) {
+SignInView.prototype.handleCreate_ = function(username) {
+  if (!this.input_create_email.value || !this.input_create_password.value) {
+    shake(this);
+    return;
+  }
+  
   if (this.input_create_password.value != this.input_create_password2.value) {
     shake(this);
     return;
