@@ -27,7 +27,7 @@ Menu.prototype.constructor_ = function(anchor, items_list) {
 Menu.prototype.init = function() {
   // Can't do this inside the click handler that created the menu.
   this.blurHandler = this.blur.bind(this);
-  document.body.addEventListener('click', this.blurHandler);
+  document.body.addEventListener('click', this.blurHandler, false);
 };
 
 Menu.prototype.blur = function() {
@@ -38,7 +38,7 @@ Menu.prototype.blur = function() {
 
 Menu.prototype.cleanUp = function() {
   document.body.removeChild(this);
-  document.body.removeEventListener('click', this.blurHandler);
+  document.body.removeEventListener('click', this.blurHandler, false);
 
   var nodes = this.childNodes;
   for (var i = 0, node; node = nodes[i]; i++) {
@@ -60,7 +60,7 @@ MenuItem.prototype.constructor_ = function(menu, item) {
   } else {
     this.innerText = item.name;
     this.clickHandler = item.clickHandler;
-    this.addEventListener('click', this.clickHandler);
+    this.addEventListener('click', this.clickHandler, false);
   }
 };
 

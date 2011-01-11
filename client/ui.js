@@ -23,11 +23,11 @@ function UI(controller) {
 
   this.menu_users = createElement('div', 'control', this.topbar);
   this.menu_users.innerHTML = 'People';
-  this.menu_users.addEventListener('click', this.handleUsersClick.bind(this));
+  this.menu_users.addEventListener('click', this.handleUsersClick.bind(this), false);
 
   this.menu_projects = createElement('div', 'control', this.topbar);
   this.menu_projects.innerHTML = 'Projects';
-  this.menu_projects.addEventListener('click', this.handleProjectsClick.bind(this));
+  this.menu_projects.addEventListener('click', this.handleProjectsClick.bind(this), false);
 
   //this.menu_logout = createElement('div', 'control', this.topbar);
   //this.menu_logout.innerHTML = 'Log out';

@@ -11,7 +11,7 @@ OwnerView.prototype.constructor_ = function(controller, task) {
 
   // Create the text.
   this.name = createElement('div', 'name', this);
-  this.name.addEventListener('click', this.handleNameClicked.bind(this));
+  this.name.addEventListener('click', this.handleNameClicked.bind(this), false);
   ToolTip().watch(this.name, '')
   this.appendChild(this.name);
   

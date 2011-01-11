@@ -21,7 +21,7 @@ ProjectUsersView.prototype.constructor_ = function(controller, project, project_
   this.title_node.innerHTML = this.project.name + ': Manage users';
 
   this.close_button = createElement('div', 'close', this);
-  this.close_button.addEventListener('click', this.handleClose.bind(this));
+  this.close_button.addEventListener('click', this.handleClose.bind(this), false);
 
   this.user_list = createElement('div', 'users-list', this);
   this.user_views = {}; // User key to node.
@@ -54,10 +54,10 @@ ProjectUsersView.prototype.handleClose = function() {
   this.classList.add('minimized');
   this.project.removeListener('users_changed', this.updateBound);
   this.add_user.removeListener('submit', this.handleAddUserBound);
-  
-  this.addEventListener('webkitTransitionEnd', (function() {
+
+  setTimeout((function() {
     this.project_view.removeProjectUsersView(this);
-  }).bind(this));
+  }).bind(this), 1000);
 };
 
 ProjectUsersView.prototype.update = function() {
@@ -92,7 +92,7 @@ ProjectUsersView.prototype.update = function() {
 
     var remove = createElement('div', 'remove', view);
     remove.appendChild(document.createTextNode('remove'));
-    remove.addEventListener('click', this.handleRemoveUser.bind(this, user_key));
+    remove.addEventListener('click', this.handleRemoveUser.bind(this, user_key), false);
     
     this.user_views[user_key] = view;
   }

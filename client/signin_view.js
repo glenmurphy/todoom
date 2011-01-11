@@ -16,13 +16,13 @@ SignInView.prototype.constructor_ = function(controller) {
   this.menu_create.innerText = "or create an account...";
   this.menu_create.addEventListener('click', (function() {
     this.showPage(this.create_page);
-  }).bind(this));
+  }).bind(this), false);
 
   this.menu_signin = createElement('div', 'subitem', this);
   this.menu_signin.innerText = "or sign in...";
   this.menu_signin.addEventListener('click', (function() {
     this.showPage(this.login_page);
-  }).bind(this));
+  }).bind(this), false);
 
   this.loading = createElement('div', 'loading', this);
   this.loading.innerText = 'connecting...';
@@ -41,7 +41,7 @@ SignInView.prototype.constructor_ = function(controller) {
   this.input_login = createElement('input', 'signin-button');
   this.input_login.type = 'button';
   this.input_login.value = 'Sign in';
-  this.input_login.addEventListener('click', this.handleLogin_.bind(this));
+  this.input_login.addEventListener('click', this.handleLogin_.bind(this), true);
 
   this.login_page.appendChild(this.input_email);
   this.login_page.appendChild(this.input_password);
@@ -66,7 +66,7 @@ SignInView.prototype.constructor_ = function(controller) {
   this.input_create = createElement('input', 'signin-button');
   this.input_create.type = 'button';
   this.input_create.value = 'Create account';
-  this.input_create.addEventListener('click', this.handleCreate_.bind(this));
+  this.input_create.addEventListener('click', this.handleCreate_.bind(this), false);
 
   this.create_page.appendChild(this.input_create_email);
   this.create_page.appendChild(this.input_create_password);
@@ -136,8 +136,10 @@ SignInView.prototype.handleSignInError_ = function(data) {
  * @param {String} username
  */
 SignInView.prototype.handleLogin_ = function(username) {
+  window.console.log('login');
   if (!this.input_email.value || !this.input_password.value) {
     shake(this);
+    window.console.log('login error');
     return;
   }
   

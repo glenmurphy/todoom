@@ -8,7 +8,7 @@ StatusView.prototype.constructor_ = function(controller, task) {
   this.task = task;
   this.task.addListener('owner_changed', this.handleChange.bind(this));
   this.task.addListener('status_changed', this.handleChange.bind(this));
-  this.addEventListener('click', this.handleClick.bind(this));
+  this.addEventListener('click', this.handleClick.bind(this), false);
 
   this.update();
 };

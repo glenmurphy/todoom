@@ -21,8 +21,8 @@ function ToolTip() {
 
 ToolTipManager.prototype.watch = function(node, text) {
   node.setAttribute('data-tooltip', text);
-  node.addEventListener('mouseover', this.handleMouseOver.bind(this, node));
-  node.addEventListener('mouseout', this.handleMouseOut.bind(this, node));
+  node.addEventListener('mouseover', this.handleMouseOver.bind(this, node), false);
+  node.addEventListener('mouseout', this.handleMouseOut.bind(this, node), false);
 };
 
 ToolTipManager.prototype.handleMouseOver = function(node) {

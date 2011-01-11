@@ -12,12 +12,12 @@ UserControls.prototype.constructor_ = function(controller, user) {
 
   if (user == this.controller.user) {
     this.archive_tasks_button = createElement('div', 'control archive', this.container);
-    this.archive_tasks_button.addEventListener('click', this.handleArchiveTasks.bind(this));
+    this.archive_tasks_button.addEventListener('click', this.handleArchiveTasks.bind(this), false);
     ToolTip().watch(this.archive_tasks_button, "Archive finished tasks");
   }
   
   this.close_button = createElement('div', 'control close', this.container);
-  this.close_button.addEventListener('click', this.handleClose.bind(this));
+  this.close_button.addEventListener('click', this.handleClose.bind(this), false);
 };
 
 UserControls.prototype.handleClose = function() {

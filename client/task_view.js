@@ -11,7 +11,7 @@ TaskView.prototype.constructor_ = function(controller, task) {
   this.appendChild(this.status);
 
   this.project = createElement('div', 'project-name', this);
-  this.project.addEventListener('click', this.handleProjectClicked.bind(this));
+  this.project.addEventListener('click', this.handleProjectClicked.bind(this), false);
 
   this.name = new TextField(this.controller, 'name', this.task, 'name');
   this.appendChild(this.name);
