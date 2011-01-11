@@ -372,8 +372,8 @@ ToDBSQL.prototype.getTasksForUser = function(user, callback) {
   Step(
     function getProjectTasks() {
       db.query("SELECT tasks.*" +
-               " FROM tasks, project_users p1, project_users p2" +
-               " WHERE (p1.user_id = ? AND p2.project_id = p1.project_id AND tasks.project = p2.project_id)" +
+               " FROM tasks, project_users, projects" +
+               " WHERE (project_users.user_id = ? AND projects.project_id = project_users.project_id AND tasks.completed_date >= projects.archive_tasks_before)" +
                " GROUP BY tasks.task_id", [user.key], this);
     },
     function gotTasks(err, results) {
@@ -381,7 +381,8 @@ ToDBSQL.prototype.getTasksForUser = function(user, callback) {
         var model = ToDBSQL.taskFromResult(task);
         tasks[model.key] = model;
       }
-      db.query("SELECT * FROM tasks WHERE owner = ? OR creator = ?", [user.key, user.key], this);
+      db.query("SELECT tasks.* FROM tasks, users" +
+               " WHERE users.user_id = ? AND tasks.owner = users.user_id OR tasks.creator = users.user_id AND tasks.completed_date >= users.archive_tasks_before", [user.key], this);
     },
     function gotTasks(err, results) {
       for (var i = 0, task; task = results[i]; i++) {
