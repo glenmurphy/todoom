@@ -277,10 +277,13 @@ body {
   vertical-align: top;
   margin:0 12px 12px 0;
   display:inline-block;
-  border:1px solid #bbb;
+  border-top:1px solid rgba(0, 0, 0, 0.23);
+  border-right:1px solid rgba(0, 0, 0, 0.18);
+  border-bottom:1px solid rgba(0, 0, 0, 0.28);
+  border-left:1px solid rgba(0, 0, 0, 0.18);
   -webkit-border-radius:1px;
   background-color:white;
-  -webkit-box-shadow:1px 1px 8px rgba(0, 0, 0, 0.1);
+  -webkit-box-shadow:1px 1px 9px rgba(0, 0, 0, 0.12);
 
   width:500px;
   text-align:left;
@@ -293,11 +296,14 @@ body {
   vertical-align: top;
   margin:0 12px 12px 0;
   display:inline-block;
-  border:1px solid #bbb;
+  border-top:1px solid rgba(0, 0, 0, 0.23);
+  border-right:1px solid rgba(0, 0, 0, 0.18);
+  border-bottom:1px solid rgba(0, 0, 0, 0.28);
+  border-left:1px solid rgba(0, 0, 0, 0.18);
   -webkit-border-radius:1px;
   width:350px;
   background-color:white;
-  -webkit-box-shadow:1px 1px 8px rgba(0, 0, 0, 0.1);
+  -webkit-box-shadow:1px 1px 9px rgba(0, 0, 0, 0.12);
   
   -webkit-transition:all 0.2s;
 }
