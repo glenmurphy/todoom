@@ -8,6 +8,9 @@ function UI(controller) {
 
   this.topbar = createElement('div', 'ui-nav hidden', document.body);
 
+  this.title = createElement('div', 'ui-title', this.topbar);
+  this.title.innerText = 'ToDoom';
+
   this.waiting_for_project = false;
   
   this.project_views = {};
@@ -18,7 +21,7 @@ function UI(controller) {
   this.projects_column = createElement('div', 'col-projects solo', this.body);
 
   this.menu_users = createElement('div', 'control', this.topbar);
-  this.menu_users.innerHTML = 'Friends';
+  this.menu_users.innerHTML = 'People';
   this.menu_users.addEventListener('click', this.handleUsersClick.bind(this));
 
   this.menu_projects = createElement('div', 'control', this.topbar);
@@ -50,6 +53,7 @@ UI.prototype.arrangeColumns = function() {
   }
   var width;
   if (isEmpty(this.user_views)) {
+
     hideCol(this.users_column);
     this.projects_column.classList.add('center');
     this.projects_column.classList.remove('hidden');
@@ -67,6 +71,19 @@ UI.prototype.arrangeColumns = function() {
     width = this.users_column.offsetWidth + this.projects_column.offsetWidth - 12;
   }
 
+  if (isEmpty(this.user_views) && !isEmpty(this.project_views)) {
+    this.topbar.classList.add('projects');
+    this.topbar.classList.remove('full');
+  }
+  else if (!isEmpty(this.user_views) && isEmpty(this.project_views)) {
+    this.topbar.classList.remove('projects');
+    this.topbar.classList.remove('full');
+  }
+  else {
+    this.topbar.classList.add('full');
+    this.topbar.classList.remove('projects');
+  }
+  
   // So that centering works while still scrolling properly at small sizes.
   this.body.style.minWidth = width + 'px';
 };
