@@ -28,6 +28,13 @@ ToDBSQL.prototype.init_ = function(clear, callback) {
   var db = this.db;
   var db_name = this.db_name;
 
+  // Reconnect to DB on set interval - this is a temporary workaround
+  // for MySQL disconnections.
+  setInterval(function() {
+    db.end();
+    db.connect();
+  }, 300000);
+
   var createDataBase = function() {
     console.log("Creating database");
     Step(
@@ -266,7 +273,11 @@ ToDBSQL.prototype.getUser = function(user_key, callback) {
     return;
   }
   this.db.query("SELECT * FROM users WHERE user_id = ? LIMIT 1", [user_key], function(err, results) {
-    if (results.length == 0) {
+    if (err) {
+      console.log(err);
+      callback(err);
+    }
+    if (!results || results.length == 0) {
       callback(null, false);
       return;
     }
@@ -276,7 +287,11 @@ ToDBSQL.prototype.getUser = function(user_key, callback) {
 
 ToDBSQL.prototype.getUserByEmail = function(email, callback) {
   this.db.query("SELECT * FROM users WHERE email = ? LIMIT 1", [email], function(err, results) {
-    if (results.length == 0) {
+    if (err) {
+      console.log(err);
+      callback(err);
+    }
+    if (!results || results.length == 0) {
       callback(null, false);
       return;
     }
