@@ -100,6 +100,13 @@ UserManager.prototype.handleSessionLogin = function(client, session_key) {
       return;
     }
     this.db.getUser(this.sessions[session_key].user_key, (function(err, user) {
+      if (err || !user) {
+        console.log("session does not exist");
+        client.send({
+          message_type : 'session_login_error'
+        });
+        return;
+      }
       this.sendInitialData(user, client);
     }).bind(this));
   } else {
