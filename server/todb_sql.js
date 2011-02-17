@@ -31,8 +31,12 @@ ToDBSQL.prototype.init_ = function(clear, callback) {
   // Reconnect to DB on set interval - this is a temporary workaround
   // for MySQL disconnections.
   setInterval(function() {
+    db.query("USE " + db_name);
+    /*
     db.end();
-    db.connect();
+    db.connect((function(err, result) {
+    }));
+    */
   }, 300000);
 
   var createDataBase = function() {
@@ -388,7 +392,11 @@ ToDBSQL.prototype.getTasksForUser = function(user, callback) {
     function getProjectTasks() {
       db.query("SELECT tasks.*" +
                " FROM tasks, project_users, projects" +
-               " WHERE (project_users.user_id = ? AND projects.project_id = project_users.project_id AND tasks.completed_date >= projects.archive_tasks_before)" +
+               " WHERE (project_users.user_id = ? AND" +
+                      " tasks.project = projects.project_id AND" +
+                      " projects.project_id = project_users.project_id AND" +
+                      " (tasks.completed_date > projects.archive_tasks_before OR tasks.completed_date = 0)" +
+               ")" +
                " GROUP BY tasks.task_id", [user.key], this);
     },
     function gotTasks(err, results) {
